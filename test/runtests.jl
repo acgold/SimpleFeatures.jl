@@ -42,6 +42,6 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         @test original_area == 10133.0
 
         new_area = sum(GDF.geomarea(buff_spdf.geom))
-        @test new_area == 438453.3303676341
+        @test new_area > 438450 && new_area < 438460
     end
 end
