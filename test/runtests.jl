@@ -3,8 +3,14 @@ import GeoDataFrames as GDF
 using DataFrames
 import GeoFormatTypes as GFT
 using Test
+using Downloads
 
-spdf = sf.st_read("test/data/test.gpkg")
+const testdatadir = joinpath(@__DIR__, "data")
+isdir(testdatadir) || mkdir(testdatadir)
+
+Downloads.download("https://github.com/acgold/SimpleFeatures.jl/raw/main/test/data/test.gpkg", joinpath(testdatadir, "test.gpkg"))
+
+spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
 
 @testset "SimpleFeatures.jl" begin
     @testset "Reading spatial DataFrame" begin
