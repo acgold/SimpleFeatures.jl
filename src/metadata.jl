@@ -13,7 +13,7 @@ end
 
 
 """
-st_set_crs(x::DataFrame)
+st_set_crs(x::DataFrame, crs::GFT.GeoFormat)
 Set the crs object within the DataFrame's metadata. Metadata will be created if it does not exist. This does not do any projection and will overwrite any existing crs info. To project to a different crs, see `st_transform`
 """
 function st_set_crs(x::DataFrame, crs::GFT.GeoFormat)

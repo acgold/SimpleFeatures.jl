@@ -1,7 +1,7 @@
 """
     st_copy(fn::AbstractString, table; layer_name="data", geom_column=:geometry, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
 
-Copy the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
+Produce a copy of the provided `table` and the associated underlying data to memory (or `fn` with associated inputs). The `geom_column` is expected to hold ArchGDAL geometries.
 """
 function st_copy(table::DataFrame; fn::Union{Nothing, AbstractString}=nothing, layer_name::AbstractString="data", driver::Union{Nothing,AbstractString}="GPKG", options::Dict{String,String}=Dict{String,String}(), geom_columns=(:geom,), kwargs...)    
     rows = Tables.rows(table)
@@ -147,6 +147,24 @@ function st_buffer(x::DataFrame, d::Number; fn::Union{Nothing, AbstractString}=n
     cx = st_copy(x; fn=fn, layer_name=layer_name, driver=driver, options=options, geom_columns=geom_columns)
 
     cx.geom = GDF.buffer(cx.geom, d)
+    
+    return cx
+end
+
+
+"""
+    st_segmentize(x::DataFrame, max_length::Number; fn::Union{Nothing, AbstractString}=nothing, layer_name::AbstractString="data", driver::Union{Nothing,AbstractString}="GPKG", options::Dict{String,String}=Dict{String,String}(), geom_columns=(:geom,))
+
+Create a new `DataFrame` that contains LineString geometries that have been sliced into lines of `max_length`. The resulting object is stored in memory as a GeoPackage by default, but a filename `fn` can be provided. The `geom_column` is expected to hold ArchGDAL geometries.
+"""
+function st_segmentize(x::DataFrame, max_length::Number; fn::Union{Nothing, AbstractString}=nothing, layer_name::AbstractString="data", driver::Union{Nothing,AbstractString}="GPKG", options::Dict{String,String}=Dict{String,String}(), geom_columns=(:geom,))::DataFrame
+    if st_is_spdf(x) !== true
+        error("Input does not contain the required metadata or geometry column")
+    end
+
+    cx = st_copy(x; fn=fn, layer_name=layer_name, driver=driver, options=options, geom_columns=geom_columns)
+
+    cx.geom = AG.segmentize!.(cx.geom, max_length)
     
     return cx
 end
