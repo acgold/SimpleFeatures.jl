@@ -10,6 +10,7 @@ using GDAL
 using JSON
 using Scratch
 using UUIDs
+using ProgressMeter
 
 # This will be filled in inside `__init__()`
 workspace = ""
@@ -22,5 +23,6 @@ include("from_gdf.jl")
 include("metadata.jl")
 include("utils.jl")
 include("operations.jl")
+include("cast.jl")
 
 end
