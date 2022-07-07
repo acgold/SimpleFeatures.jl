@@ -9,8 +9,8 @@
 
 Reading, analyzing, manipulating, and writing vector GIS data in Julia. This package:
 - Handles operations as a DataFrame (i.e., DataFrame in, DataFrame out)
-- Stores coordinate reference system (crs) info with the DataFrame and uses it automatically
-- Creates new copies of objects and their underlying geographic data (GDAL) when performing functions (unless specified with a `!`)
+- Stores coordinate reference system (crs) info with the DataFrame and uses it automatically (DataFrames metadata)
+- Creates new copies of Julia objects when performing functions (unless specified with a `!`)
 
 This package builds on existing Julia GIS packages [GeoDataFrames](https://github.com/evetion/GeoDataFrames.jl) and [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/).
 
