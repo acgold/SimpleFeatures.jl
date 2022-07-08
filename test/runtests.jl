@@ -99,6 +99,31 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
 
     end
 
+    @testset "multipoint to linestring" begin
+        multipoint = AG.createmultipoint([(0.,0.), (0.,1.), (1.,1.)])
+        x = DataFrames.DataFrame(lyr1 = 1, geom = multipoint)
+        sf.st_set_crs(x, GFT.EPSG(5070))
+        sf.st_set_geomtype(x, AG.getgeomtype(x.geom[1]))
+
+        @test sf.st_is_spdf(x)
+        @test sf.st_geomtype(x) === AG.wkbMultiPoint
+        @test AG.ngeom(x.geom[1]) == 3
+
+        mp_x = sf.multipoint_to_linestring(x)
+        @test sf.st_is_spdf(mp_x)
+        @test sf.st_geomtype(mp_x) === AG.wkbLineString
+        @test AG.ngeom(mp_x.geom[1]) == 3
+    end
+
+    @testset "polygon to multilinestring" begin
+        mls = sf.polygon_to_multilinestring(spdf)
+        @test sf.st_geomtype(spdf) === AG.wkbPolygon
+        @test sf.st_geomtype(mls) === AG.wkbMultiLineString
+
+        @test DataFrames.nrow(spdf) === 1000
+        @test DataFrames.nrow(mls) === 1000
+    end
+
     @testset "replacing metadata" begin
         copy1 = sf.st_copy(spdf)
         copy2 = sf.st_copy(spdf)
