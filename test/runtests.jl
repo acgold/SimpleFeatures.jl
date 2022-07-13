@@ -1,12 +1,10 @@
-# using Revise
+using Revise
 import SimpleFeatures as sf
-import GeoDataFrames as GDF
 using DataFrames
 import GeoFormatTypes as GFT
 using Test
 using Downloads
 import ArchGDAL as AG
-import BenchmarkTools
 
 const testdatadir = joinpath(@__DIR__, "data")
 isdir(testdatadir) || mkdir(testdatadir)
@@ -51,11 +49,11 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
 
     @testset "buffer spatial DataFrame" begin
         buff_spdf = sf.st_buffer(spdf, 10)
-        original_area = sum(GDF.geomarea(sf.sfgeom_to_gdal.(spdf.geom)))
+        original_area = sum(AG.geomarea.(sf.sfgeom_to_gdal.(spdf.geom)))
         @test original_area == 10133.0
 
-        new_area = sum(GDF.geomarea(sf.sfgeom_to_gdal.(buff_spdf.geom)))
-        @test new_area > 436490 && new_area < 436550
+        new_area = sum(AG.geomarea.(sf.sfgeom_to_gdal.(buff_spdf.geom)))
+        @test new_area > 438440 && new_area < 438470
     end
 
     @testset "st_cast combine - full example" begin

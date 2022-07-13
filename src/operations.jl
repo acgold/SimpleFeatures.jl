@@ -14,7 +14,7 @@ function st_transform(x::DataFrame, crs::GFT.GeoFormat; geom_columns=(:geom,), s
 
     geom_list = sfgeom_to_gdal.(x.geom)
 
-    GDF.reproject(geom_list, x_crs, crs)
+    AG.reproject(geom_list, x_crs, crs)
 
     new_df = DataFrames.select(x, Not(:geom))
     new_df[:,:geom] = gdal_to_sfgeom.(geom_list)
@@ -33,12 +33,12 @@ function st_buffer(x::DataFrame, d::Number; geom_columns=(:geom,))::DataFrame
         error("Input does not contain the required metadata or geometry column")
     end
 
-    geom_list = sfgeom_to_geos.(x.geom)
+    geom_list = sfgeom_to_gdal.(x.geom)
 
-    buffer_list = LibGEOS.buffer.(geom_list, d)
+    buffer_list = AG.buffer.(geom_list, d)
 
     new_df = DataFrames.select(x, Not(:geom))
-    new_df[!,:geom] = geos_to_sfgeom.(buffer_list)
+    new_df[!,:geom] = gdal_to_sfgeom.(buffer_list)
         
     return new_df
 end

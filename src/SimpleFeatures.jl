@@ -2,7 +2,6 @@ module SimpleFeatures
 
 import ArchGDAL as AG
 using DataFrames
-import GeoDataFrames as GDF
 using Tables
 import GeoFormatTypes as GFT
 using GeoInterface
@@ -10,7 +9,7 @@ using GDAL
 using JSON
 using UUIDs
 using ProgressMeter
-using LibGEOS
+# using LibGEOS
 
 include("sfgeom.jl")
 include("from_gdf.jl")

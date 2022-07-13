@@ -10,7 +10,7 @@
 Fast reading, analyzing, manipulating, and writing vector GIS data in Julia. This package:
 - Handles operations as a [**DataFrame**](https://dataframes.juliadata.org/stable/) (i.e., DataFrame in, DataFrame out)
 - Stores coordinate reference system (crs) info with the DataFrame and uses it automatically
-- Interfaces with [**GDAL**](https://gdal.org) and [**GEOS**](https://libgeos.org) for fast operations
+- Interfaces with [**GDAL**](https://gdal.org) and [**GEOS**](https://libgeos.org) (*coming soon!*) for fast operations
 
 # Installation
 
@@ -88,10 +88,10 @@ wkbPolygon::OGRwkbGeometryType = 3
 
 Current functionality is:
 - Casting geometries to different types: `sf.st_cast`
-- Buffering: `sf.st_buffer` (*GEOS*)
+- Buffering: `sf.st_buffer` (*GDAL. Will be GEOS soon*)
 - Reprojecting: `sf.st_transform` (*GDAL*)
 - Segmentizing a line: `sf.st_segmentize` (*GDAL*)
-- Converting between `sfgeom` objects and GDAL or GEOS: `sf.sfgeom_to_gdal`, `sf.gdal_to_sfgeom`, `sf.sfgeom_to_geos`, `sf.geos_to_sfgeom` 
+- Converting between `sfgeom` objects and GDAL or GEOS (coming soon): `sf.sfgeom_to_gdal`, `sf.gdal_to_sfgeom` 
 
 ### Cast polygons to linestrings
 
@@ -257,7 +257,7 @@ Each row of the `geom` column is a `SimpleFeatures` `sfgeom` object that has two
 
 
 This data structure allows `SimpleFeatures` to:
-- interface with GDAL and GEOS for fast operations (using using [ArchGDAL.jl](https://github.com/yeesian/ArchGDAL.jl/) and [LibGEOS.jl](https://github.com/JuliaGeo/LibGEOS.jl), respectively)
+- interface with GDAL and GEOS (coming soon) for fast operations (using using [ArchGDAL.jl](https://github.com/yeesian/ArchGDAL.jl/) and [LibGEOS.jl](https://github.com/JuliaGeo/LibGEOS.jl), respectively)
 - provide a preview of the geometry's WKT for viewing
 - represent geometries (`wkb`) in Julia without needing to define a new SimpleFeatures type for each type of geometry. SimpleFeatures uses ArchGDAL geometry types for geometry type info.
 

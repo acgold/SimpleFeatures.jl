@@ -30,12 +30,6 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
-[[deps.BenchmarkTools]]
-deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
-git-tree-sha1 = "4c10eee4af024676200bc7752e536f858c6b8f93"
-uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-version = "1.3.1"
-
 [[deps.CEnum]]
 git-tree-sha1 = "eb4cb44a499229b3b8426dcfb5dd85333951ff90"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
@@ -188,12 +182,6 @@ git-tree-sha1 = "4ceb4cdae127931b852ced4d3782bb51ab5e2632"
 uuid = "d604d12d-fa86-5845-992e-78dc15976526"
 version = "3.10.2+0"
 
-[[deps.GeoDataFrames]]
-deps = ["ArchGDAL", "DataFrames", "GeoFormatTypes", "GeoInterface", "Pkg", "Tables"]
-git-tree-sha1 = "fb7a6169e44cfc398ed6dcb92241353ded9f50e8"
-uuid = "62cb38b5-d8d2-4862-a48e-6a340996859f"
-version = "0.3.0"
-
 [[deps.GeoFormatTypes]]
 git-tree-sha1 = "434166198434a5c2fcc0a1a59d22c3b0ad460889"
 uuid = "68eda718-8dee-11e9-39e7-89f7f65f511f"
@@ -285,14 +273,6 @@ uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
-
-[[deps.LibGEOS]]
-deps = ["CEnum", "GEOS_jll", "GeoInterface"]
-git-tree-sha1 = "ad7e25008199cb18c132e452a0e16d8a9a96b977"
-repo-rev = "master"
-repo-url = "https://github.com/JuliaGeo/LibGEOS.jl.git"
-uuid = "a90b1aa1-3769-5649-ba7e-abc5a9d163eb"
-version = "0.7.0"
 
 [[deps.LibGit2]]
 deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
@@ -449,10 +429,6 @@ version = "1.3.1"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-
-[[deps.Profile]]
-deps = ["Printf"]
-uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 
 [[deps.ProgressMeter]]
 deps = ["Distributed", "Printf"]
