@@ -262,7 +262,8 @@ aggregate_names = ["point", "multipoint", "linestring", "multilinestring", "poly
 aggregate_functions = ["geom_to_multigeom", "multipoint_to_linestring", "geom_to_multigeom", "multilinestring_to_polygon","geom_to_multigeom"]
 
 """
-st_cast(x::DataFrame, to::String)
+    st_cast(x::DataFrame, to::String)
+    
 Cast features geometries to the requested type. See below for the ordered list of `to` values. Any decomposition from a multigeometry type to a single geometry type will add a unique ID of the multigeometry object as a column (e.g., `_MultiPolygonID`) so the original multigeometry can be re-created later. 
 
 Hierarchy of `to` values:
