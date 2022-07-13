@@ -4,6 +4,7 @@ function multigeom_to_geom(x::DataFrame)
     end
     
     geom_type = st_geomtype(x)
+    geom_id = "_" * replace(replace(string(geom_type), "multi" => ""), "wkb" =>"") * "ID"
 
     if geom_type === AG.wkbGeometryCollection
         error("GeometryCollections currently not supported")
@@ -11,14 +12,14 @@ function multigeom_to_geom(x::DataFrame)
 
     collection = DataFrames.DataFrame()
 
-    @showprogress for row in eachrow(x)
+    for row in eachrow(x)
         geometry = row.geom
         n = AG.ngeom(geometry)
 
         geom_list = [AG.getgeom(geometry,i) for i in 0:(n-1)]
         new_df = DataFrames.select(repeat(DataFrames.DataFrame(row), n), Not(:geom))
+        new_df[:,geom_id] = fill(DataFrames.rownumber(row), nrow(new_df))
         new_df[:,:geom] = geom_list
-        new_df[:,"_sfid"] = fill(DataFrames.rownumber(row), nrow(new_df))
         append!(collection, new_df)
     end
 
@@ -56,13 +57,9 @@ function _geom_to_multi(x::DataFrame)
 end
 
 
-function geom_to_multigeom(x::DataFrame, groupid::String)
+function geom_to_multigeom(x::DataFrame, groupid::Union{String, Nothing}=nothing)
     if st_is_spdf(x) !== true
         error("Input does not contain the required metadata or geometry column")
-    end
-
-    if !(groupid in names(x))
-        error("groupid does not match any column names")
     end
     
     if groupid === nothing
@@ -70,11 +67,18 @@ function geom_to_multigeom(x::DataFrame, groupid::String)
         return _geom_to_multi(x)
     end
 
+    if !(groupid in names(x))
+        error("groupid does not match any column names")
+    end
+
     new_df = DataFrames.DataFrame()
-    @showprogress for df in groupby(x, groupid)
+    for df in groupby(x, groupid)
         append!(new_df, _geom_to_multi(DataFrames.DataFrame(df)))
     end
-    
+
+    replace_metadata!(new_df, x)
+    st_set_geomtype(new_df, AG.getgeomtype(new_df.geom[1]))
+
     return new_df
 end
 
@@ -190,6 +194,161 @@ function polygon_to_multilinestring(x::DataFrame)
     st_set_geomtype(new_df, AG.getgeomtype(new_df.geom[1]))
 
     return new_df
+end
+
+function linestring_to_linearring(x::AG.IGeometry{AG.wkbLineString})
+    linearring = AG.createlinearring()
+    for i in 0:(AG.ngeom(x)-1)
+        pt = GeoInterface.coordinates(AG.getgeom(x,i))
+        AG.addpoint!(linearring, pt[1], pt[2])
+    end
+
+     return linearring
+end
+
+function multilinestring_to_polygon(x::DataFrame)
+    if st_is_spdf(x) !== true
+        error("Input does not contain the required metadata or geometry column")
+    end
+
+    geom_type = st_geomtype(x)
+
+    if geom_type !== AG.wkbMultiLineString
+        error("Only MultiLineStrings allowed")
+    end
+
+    geom_list = Vector{AG.IGeometry{AG.wkbPolygon}}()
+
+    ring_warning = false
+
+    for row in eachrow(x)
+        polygon = AG.createpolygon()
+
+        nrings = AG.ngeom(row.geom)
+
+        for i in 0:(nrings-1)
+            ring = linestring_to_linearring(AG.getgeom(row.geom, i))
+
+            if GeoInterface.isring(ring) === false
+                ring_warning = true
+            end
+
+            AG.addgeom!(polygon, ring)
+        end
+
+        push!(geom_list, polygon)
+    end
+
+    new_df = DataFrames.select(x, Not(:geom))
+    new_df[:,:geom] = geom_list
+
+    replace_metadata!(new_df, x)
+    st_set_geomtype(new_df, AG.getgeomtype(new_df.geom[1]))
+
+    if ring_warning === true
+        println("Warning: Some input lines were not valid rings. Polygons may include errors. See `GeoInterface.isring` to find invalid lines")
+    end
+
+    return new_df
+end
+
+
+decompose_types = [AG.wkbMultiPolygon, AG.wkbPolygon, AG.wkbMultiLineString, AG.wkbLineString, AG.wkbMultiPoint, AG.wkbPoint]
+decompose_names = ["multipolygon", "polygon", "multilinestring", "linestring", "multipoint", "point"]
+decompose_functions = ["multigeom_to_geom", "polygon_to_multilinestring", "multigeom_to_geom", "linestring_to_multipoint", "multigeom_to_geom"]
+
+aggregate_types = [AG.wkbPoint, AG.wkbMultiPoint, AG.wkbLineString, AG.wkbMultiLineString, AG.wkbPolygon, AG.wkbMultiPolygon]
+aggregate_names = ["point", "multipoint", "linestring", "multilinestring", "polygon", "multipolygon"]
+aggregate_functions = ["geom_to_multigeom", "multipoint_to_linestring", "geom_to_multigeom", "multilinestring_to_polygon","geom_to_multigeom"]
+
+"""
+st_cast(x::DataFrame, to::String)
+Cast features geometries to the requested type. See below for the ordered list of `to` values. Any decomposition from a multigeometry type to a single geometry type will add a unique ID of the multigeometry object as a column (e.g., `_MultiPolygonID`) so the original multigeometry can be re-created later. 
+
+Hierarchy of `to` values:
+- "multipolygon"
+- "polygon"
+- "multilinestring"
+- "linestring"
+- "multipoint"
+- "point"
+"""
+function st_cast(x::DataFrame, to::String; groupid::Union{String, Nothing}=nothing)
+    if st_is_spdf(x) !== true
+        error("Input does not contain the required metadata or geometry column")
+    end
+
+    geom_type = st_geomtype(x)
+    idx_from = findfirst(item -> item ==(geom_type), decompose_types)
+    idx_to = findfirst(item -> item ==(to), decompose_names) - 1
+
+    # If creating new higher level geometries (i.e., points -> linestring)
+    if (idx_to - idx_from) < -1
+        idx_from = findfirst(item -> item ==(geom_type), aggregate_types)
+        idx_to = findfirst(item -> item ==(to), aggregate_names) - 1
+        functions = aggregate_functions[idx_from:idx_to]
+
+        # copy df and convert sfgeoms to AG
+        cx = DataFrames.select(x, Not(:geom))
+        cx[:,:geom] = sfgeom_to_gdal.(x.geom)
+
+        if length(functions) === 1
+            f = getfield(SimpleFeatures, Symbol(functions[1]))
+    
+            if occursin("multigeom", functions[1]) === true
+                cx = f(cx, groupid)
+                cx[!,:geom] = gdal_to_sfgeom.(cx.geom)
+        
+                return cx
+            end
+    
+            if occursin("multigeom", functions[1]) === false
+                cx = f(cx)
+                cx[!,:geom] = gdal_to_sfgeom.(cx.geom)
+    
+                return cx
+            end
+        else
+            error("Only one transformation step allowed when composing geometries.")
+        end
+
+    # If decomposing geometries (i.e., linestring -> points)
+    elseif (idx_to - idx_from) >= 0
+        functions = decompose_functions[idx_from:idx_to]
+
+        # copy df and convert sfgeoms to AG
+        cx = DataFrames.select(x, Not(:geom))
+        cx[:,:geom] = sfgeom_to_gdal.(x.geom)
+
+        if length(functions) < 1
+            error("Requested transformation not possible - `st_cast` only decomposes geometries.  See `aggregate` for more.")
+        end
+
+        if length(functions) === 1
+            f = getfield(SimpleFeatures, Symbol(functions[1]))
+            cx = f(cx)
+            cx[!,:geom] = gdal_to_sfgeom.(cx.geom)
+            return cx
+        end
+
+        if length(functions) > 1
+            f = getfield(SimpleFeatures, Symbol(popfirst!(functions)))
+            cx = f(cx)
+
+            for fx in functions
+                f = getfield(SimpleFeatures, Symbol(fx))
+                cx = f(cx)
+            end
+
+            cx[!,:geom] = gdal_to_sfgeom.(cx.geom)
+
+            return cx
+        end
+    
+    # if geomtype is the same as the new geomtype requested
+    else 
+        error("`to` is the same geomtype as the input `x`")
+    end
 end
 
 # For reference

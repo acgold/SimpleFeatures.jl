@@ -56,7 +56,7 @@ function st_geomtype(x::DataFrame)
 end
 
 """
-st_set_geomtype(x::DataFrame)
+st_set_geomtype(x::DataFrame, geomtype::AG.OGRwkbGeometryType)
 Set the geometry type of the DataFrame from the DataFrame's metadata
 """
 function st_set_geomtype(x::DataFrame, geomtype::AG.OGRwkbGeometryType)

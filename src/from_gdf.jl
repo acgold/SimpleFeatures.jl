@@ -156,6 +156,16 @@ function st_read(ds, layer)
         crs = GFT.WellKnownText2(toWKT2(AG.getspatialref(table)))
         geomtype = AG.getgeomtype(table)
         df = DataFrame(table)
+
+        sfgeom_list = Vector{sfgeom}()
+
+        for row in eachrow(df)
+            push!(sfgeom_list, sfgeom(AG.toWKB(row.geom), preview_wkt_gdal(row.geom)))
+        end
+
+        # df = DataFrames.select(df, Not(:geom))
+        df[!,:geom] = sfgeom_list
+
         meta_df = metadata(df)
         meta_df["crs"] = crs; meta_df["geomtype"] = geomtype; meta_df["description"] = "description"
 
@@ -170,12 +180,25 @@ end
 
 Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function st_write(fn::AbstractString, table; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=(:geom,), kwargs...)
-    rows = Tables.rows(table)
+function st_write(fn::AbstractString, table::DataFrame; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=(:geom,), kwargs...)
+    if(typeof(table.geom[1]) !== sfgeom)
+        error("Geometries are not type `sfgeom` and cannot be written with this function")
+    end
+    
+    geom_list = Vector{AG.AbstractGeometry}()
+
+    for row in eachrow(table)
+        push!(geom_list, AG.fromWKB(row.geom.wkb))
+    end
+
+    new_df = DataFrames.select(table, Not(:geom))
+    new_df[:,:geom] = geom_list
+    
+    rows = Tables.rows(new_df)
     sch = Tables.schema(rows)
     
-    if hasmetadata(table) === true
-        meta_df = metadata(table)
+    if hasmetadata(new_df) === true
+        meta_df = metadata(new_df)
         crs = meta_df["crs"]
     elseif crs !== nothing
         crs = crs
@@ -185,7 +208,7 @@ function st_write(fn::AbstractString, table; layer_name::AbstractString="data", 
     end
 
     # Determine geometry columns
-    isnothing(geom_columns) && error("Please set `geom_columns` or define `GeoInterface.geometrycolumns` for $(typeof(table))")
+    isnothing(geom_columns) && error("Please set `geom_columns` or define `GeoInterface.geometrycolumns` for $(typeof(new_df))")
     if :geom_column in keys(kwargs)  # backwards compatible
         geom_columns = (kwargs[:geom_column],)
     end
