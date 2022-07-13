@@ -7,6 +7,8 @@ CurrentModule = SimpleFeatures
 [![Build Status](https://github.com/acgold/SimpleFeatures.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/acgold/SimpleFeatures.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/acgold/SimpleFeatures.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/acgold/SimpleFeatures.jl)
 
+[Link to GitHub Repo](https://github.com/acgold/SimpleFeatures.jl)
+
 ## Working with simple feature GIS data in Julia 
 
 Fast reading, analyzing, manipulating, and writing vector GIS data in Julia. This package:
