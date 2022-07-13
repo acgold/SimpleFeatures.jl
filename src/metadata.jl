@@ -4,8 +4,8 @@
 Extract the crs object from the DataFrame's metadata
 """
 function st_crs(x::DataFrame)
-if hasmetadata(x)
-    return metadata(x)["crs"]
+if DataFrames.hasmetadata(x)
+    return DataFrames.metadata(x)["crs"]
 else
     error("No crs found in metadata")
 end
@@ -33,8 +33,8 @@ function st_is_spdf(x::DataFrame)
 has_crs = false
 has_geom = false
 
-if hasmetadata(x)
-    has_crs = haskey(metadata(x), "crs")
+if DataFrames.hasmetadata(x)
+    has_crs = haskey(DataFrames.metadata(x), "crs")
 end
 
 for col in eachcol(DataFrame(first(x)))
@@ -52,8 +52,8 @@ end
 Extract the geometry type of the DataFrame from the DataFrame's metadata
 """
 function st_geomtype(x::DataFrame)
-    if hasmetadata(x)
-        return metadata(x)["geomtype"]
+    if DataFrames.hasmetadata(x)
+        return DataFrames.metadata(x)["geomtype"]
     else
         error("No geomtype found in metadata")
     end

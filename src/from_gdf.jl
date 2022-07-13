@@ -166,7 +166,7 @@ function st_read(ds, layer)
         # df = DataFrames.select(df, Not(:geom))
         df[!,:geom] = sfgeom_list
 
-        meta_df = metadata(df)
+        meta_df = DataFrames.metadata(df)
         meta_df["crs"] = crs; meta_df["geomtype"] = geomtype; meta_df["description"] = "description"
 
         return df
@@ -197,8 +197,8 @@ function st_write(fn::AbstractString, table::DataFrame; layer_name::AbstractStri
     rows = Tables.rows(new_df)
     sch = Tables.schema(rows)
     
-    if hasmetadata(new_df) === true
-        meta_df = metadata(new_df)
+    if DataFrames.hasmetadata(new_df) === true
+        meta_df = DataFrames.metadata(new_df)
         crs = meta_df["crs"]
     elseif crs !== nothing
         crs = crs
