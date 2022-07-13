@@ -34,12 +34,9 @@ import SimpleFeatures as sf
 
 ## Read & write data
 ### Read
-*Input:*
 ```julia
 df = sf.st_read("data/test.gpkg")
-```
-*Output:*
-```julia
+
 1000×2 DataFrame
   Row │ geom                          lyr.1 
       │ sfgeom                        Int32 
@@ -55,24 +52,19 @@ df = sf.st_read("data/test.gpkg")
 ```
 
 ### Write
-*Input:*
+
 ```julia
 df = sf.st_write("data/new_test.gpkg", df)
-```
-*Output:*
-```julia
+
 "data/new_test.gpkg"
 ```
 
 ## Metadata
 ### View metadata dictionary
 
-*Input:*
 ```julia
 DataFrames.metadata(df)
-```
-*Output:*
-```julia
+
 Dict{String, Any} with 3 entries:
     "geomtype"    => wkbPolygon
     "description" => "description"
@@ -80,22 +72,17 @@ Dict{String, Any} with 3 entries:
 ```
 
 ### View crs info
-*Input*:
+
 ```julia
 sf.st_crs(df)
-```
-*Output*:
-```julia
+
 GeoFormatTypes.WellKnownText2{GeoFormatTypes.Unknown}(GeoFormatTypes.Unknown(), "PROJCRS[\"NAD83(2011) / UTM zone 17N\",BASEGEOGCRS[\"NAD83(2011)\",
 ```
 
 ### View geometry type info
-*Input*:
 ```julia
 sf.st_geomtype(df)
-```
-*Output*:
-```julia
+
 wkbPolygon::OGRwkbGeometryType = 3
 ```
 
@@ -112,15 +99,12 @@ Current functionality is:
 
 ### Cast polygons to linestrings
 
-*Input:*
+`SimpleFeatures` casts each polygon to a **multilinestring** and then casts those to **linestrings**. Some polygons had holes (multiple lines per polygon), so the resulting DataFrame has more rows than the original. In cases such as this, `SimpleFeatures` adds a column of the geometry type + "ID" (e.g. `_MultiLineStringID`) that preserves which multigeometry type the split geometry belonged to.
+
 ```julia
 df.geom # to see original geom
 sf.st_cast(df, "linestring")
-```
-> `SimpleFeatures` casts each polygon to a **multilinestring** and then casts those to **linestrings**. Some polygons had holes (multiple lines per polygon), so the resulting DataFrame has more rows than the original. In cases such as this, `SimpleFeatures` adds a column of the geometry type + "ID" (e.g. `_MultiLineStringID`) that preserves which multigeometry type the split geometry belonged to.
 
-*Output:*
-```julia
 Vector of sfgeom Geometries (n = 1000):
 First 5 geometries 
   POLYGON ((853787 3905499,...
@@ -143,13 +127,10 @@ First 5 geometries
                                                1016 rows omitted
 ```
 ### Buffer
-*Input:*
 ```julia
 mls_df = sf.st_cast(df, "multilinestring") # make a df with multilinestrings so we can see our buffer work
 sf.st_buffer(mls_df, 10) # buffer distance is in units of the crs. Meters in this example
-```
-*Output:*
-```julia
+
 1000×2 DataFrame
   Row │ lyr.1  geom                         
       │ Int32  sfgeom                       
@@ -162,7 +143,7 @@ sf.st_buffer(mls_df, 10) # buffer distance is in units of the crs. Meters in thi
   999 │     1  MULTILINESTRING ((905355 ...
  1000 │     1  MULTILINESTRING ((905561 ...
                             994 rows omitted
-                            
+
 1000×2 DataFrame
   Row │ lyr.1  geom                         
       │ Int32  sfgeom                       
@@ -178,13 +159,11 @@ sf.st_buffer(mls_df, 10) # buffer distance is in units of the crs. Meters in thi
 ```
 
 ### Reproject
-*Input:*
+
 ```julia
 df.geom # to see original geom
 proj_df = sf.st_transform(df, GeoFormatTypes.EPSG(5070))
-```
 
-```julia
 Vector of sfgeom Geometries (n = 1000):
 First 5 geometries 
   POLYGON ((853787 3905499,...
