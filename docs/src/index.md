@@ -20,7 +20,7 @@ Fast reading, analyzing, manipulating, and writing vector GIS data in Julia. Thi
 
 `SimpleFeatures` creates a custom type, **a `SimpleFeature` object**, that contains a DataFrame of features, crs info, and geometry type info.
 
-Geometry data within the dataframe are stored as another custom type, an **`sfgeom`** object. This `sfgeom` type contains a geometry's Well-known binary (WKB) representation and a preview of the Well-known text (WKT).  See more below in the section "**More about how it works**".
+Geometry data within the dataframe are stored as another custom type, an **`sfgeom`** object. This `sfgeom` type contains a geometry's Well-known binary (WKB) representation and a preview of the Well-known text (WKT).  See more below in the section "**How it works**".
 
 **Example:**
 
@@ -196,7 +196,7 @@ features:
 
 Each row is a feature, and geometry data for each feature are stored in the `geom` column. 
 
-**Example**
+**Example:**
 
 ```julia
 1000×2 DataFrame
@@ -217,12 +217,13 @@ Each row is a feature, and geometry data for each feature are stored in the `geo
 
 These metadata (`.crs`, `.geomtype`) are stored as a attributes within a `SimpleFeature` object and can be modified or accessed directly.
 
-**Example**:
+**Example:**:
 ```julia
 x.crs 
 
 GeoFormatTypes.WellKnownText2{GeoFormatTypes.Unknown}(GeoFormatTypes.Unknown(), "PROJCRS[\"NAD83(2011) / UTM zone 17N\",BASEGEOGCRS[\"NAD83(2011)\",DATUM[...
 ```
+
 ```julia
 x.geomtype
 
