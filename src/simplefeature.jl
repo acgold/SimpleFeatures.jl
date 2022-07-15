@@ -1,0 +1,38 @@
+# Define sfdf type
+mutable struct SimpleFeature
+    df::DataFrame
+    crs::GFT.GeoFormat
+    geomtype::AG.OGRwkbGeometryType
+end
+
+Base.:(==)(a::SimpleFeature, b::SimpleFeature) = a.df == b.df && a.crs == b.crs && a.geomtype == b.geomtype
+
+# Define printing behavior 
+function Base.show(io::IO, x::SimpleFeature) 
+    ds = displaysize(io)
+
+    printstyled(io, "SimpleFeature" *"\n", bold=true)
+    println(io, "---------")
+
+    printstyled(io, "geomtype:  "; color= :yellow)
+    println(io, x.geomtype)
+
+    if length(x.crs.val) < 100
+        printstyled(io,  "crs:   "; color= :yellow)
+        println(io, x.crs.val)
+        println(io, "---------")
+        printstyled(io, "features:  "*"\n"; color= :yellow)
+        DataFrames.Base.show(IOContext(io, :displaysize=>(ds[1]-6,ds[2])),x.df; )
+    elseif length(x.crs.val) >= 100
+        printstyled(io,  "crs:       "; color= :yellow)
+        println(io, x.crs.val[1:100] * "...")
+        println(io, "---------")
+        printstyled(io, "features:  "*"\n"; color= :yellow)
+        DataFrames.Base.show(IOContext(io, :displaysize=>(ds[1]-6,ds[2])),x.df; )
+    else
+        println(io, "NO CRS INFO")
+        println(io, "---------")
+        printstyled(io, "features:  "*"\n"; color= :yellow)
+        DataFrames.Base.show(IOContext(io, :displaysize=>(ds[1]-6,ds[2])),x.df; )
+    end
+end

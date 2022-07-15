@@ -31,67 +31,6 @@
 ## SOFTWARE.
 ## -----------------------------------------
 
-# GDF: Taken from https://github.com/simonster/Reexport.jl/blob/master/src/Reexport.jl by https://github.com/simonster
-# GDF: As no release has been made yet: https://github.com/simonster/Reexport.jl/pull/23
-macro reexport(ex)
-    isa(ex, Expr) && (ex.head == :module ||
-                      ex.head == :using ||
-                      (ex.head == :toplevel &&
-                       all(e -> isa(e, Expr) && e.head == :using, ex.args))) ||
-        error("@reexport: syntax error")
-
-    if ex.head == :module
-        modules = Any[ex.args[2]]
-        ex = Expr(:toplevel, ex, :(using .$(ex.args[2])))
-    elseif ex.head == :using && all(e -> isa(e, Symbol), ex.args)
-        modules = Any[ex.args[end]]
-    elseif ex.head == :using && ex.args[1].head == :(:)
-        symbols = [e.args[end] for e in ex.args[1].args[2:end]]
-        return esc(Expr(:toplevel, ex, :(eval(Expr(:export, $symbols...)))))
-    else
-        modules = Any[e.args[end] for e in ex.args]
-    end
-
-    esc(Expr(:toplevel, ex,
-        [:(eval(Expr(:export, names($mod)...))) for mod in modules]...))
-end
-
-
-# @reexport using ArchGDAL: intersects, equals, disjoint, touches, crosses, within, contains, overlaps
-# @reexport using ArchGDAL: boundary, convexhull, buffer
-# @reexport using ArchGDAL: intersection, union, difference, symdifference, distance
-# @reexport using ArchGDAL: geomlength, geomarea, centroid
-# @reexport using ArchGDAL: isvalid, issimple, isring, geomarea, centroid
-# @reexport using ArchGDAL: createpoint, createlinestring, createlinearring, createpolygon, createmultilinestring, createmultipolygon
-# @reexport using ArchGDAL: reproject
-
-# AG.intersects(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.intersects.(a, b)
-# AG.equals(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.equals.(a, b)
-# AG.disjoint(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.disjoint.(a, b)
-# AG.touches(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.touches.(a, b)
-# AG.crosses(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.crosses.(a, b)
-# AG.within(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.within.(a, b)
-# AG.contains(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.contains.(a, b)
-# AG.overlaps(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.overlaps.(a, b)
-# AG.intersection(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.intersection.(a, b)
-# AG.union(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.union.(a, b)
-# AG.difference(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.difference.(a, b)
-# AG.symdifference(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.symdifference.(a, b)
-# AG.distance(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.distance.(a, b)
-
-# AG.boundary(v::Vector{AG.IGeometry{T}}) where {T} = AG.boundary.(v)
-# AG.convexhull(v::Vector{AG.IGeometry{T}}) where {T} = AG.convexhull.(v)
-# AG.buffer(v::Vector{AG.IGeometry{T}}, d) where {T} = AG.buffer.(v, d)
-# AG.transform!(v::Vector{AG.IGeometry{T}}, d) where {T} = AG.buffer.(v, d)
-# AG.geomlength(v::Vector{AG.IGeometry{T}}) where {T} = AG.geomlength.(v)
-# AG.geomarea(v::Vector{AG.IGeometry{T}}) where {T} = AG.geomarea.(v)
-# AG.centroid(v::Vector{AG.IGeometry{T}}) where {T} = AG.centroid.(v)
-# AG.isempty(v::Vector{AG.IGeometry{T}}) where {T} = AG.isempty.(v)
-# AG.isvalid(v::Vector{AG.IGeometry{T}}) where {T} = AG.isvalid.(v)
-# AG.issimple(v::Vector{AG.IGeometry{T}}) where {T} = AG.issimple.(v)
-# AG.isring(v::Vector{AG.IGeometry{T}}) where {T} = AG.isring.(v)
-
-
 const drivers = AG.listdrivers()
 const drivermapping = Dict(
     ".shp" => "ESRI Shapefile",
@@ -129,6 +68,7 @@ end
 Read a file into a DataFrame. Any kwargs are passed onto ArchGDAL [here](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}).
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 """
+
 function st_read(fn::AbstractString; kwargs...)
     t = AG.read(fn; kwargs...) do ds
         if AG.nlayer(ds) > 1
@@ -150,12 +90,13 @@ end
 function st_read(ds, layer)
     df = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
-            throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
+            throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"));
         end
 
         crs = GFT.WellKnownText2(toWKT2(AG.getspatialref(table)))
         geomtype = AG.getgeomtype(table)
-        df = DataFrame(table)
+        df = DataFrames.DataFrame(table)
+        # n_row = DataFrames.nrow(df);
 
         sfgeom_list = Vector{sfgeom}()
 
@@ -163,15 +104,13 @@ function st_read(ds, layer)
             push!(sfgeom_list, sfgeom(AG.toWKB(row.geom), preview_wkt_gdal(row.geom)))
         end
 
-        # df = DataFrames.select(df, Not(:geom))
         df[!,:geom] = sfgeom_list
 
-        meta_df = DataFrames.metadata(df)
-        meta_df["crs"] = crs; meta_df["geomtype"] = geomtype; meta_df["description"] = "description"
+        sf_df = SimpleFeature(df, crs, geomtype)
 
-        return df
+        return sf_df
     end
-    "" in names(df) && rename!(df, Dict(Symbol("") => :geometry,))  # needed for now
+    "" in names(df.df) && rename!(df.df, Dict(Symbol("") => :geometry,))  # needed for now
     return df
 end
 
@@ -180,7 +119,9 @@ end
 
 Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function st_write(fn::AbstractString, table::DataFrame; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=(:geom,), kwargs...)
+function st_write(fn::AbstractString, x::SimpleFeature; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=(:geom,), kwargs...)
+    table = x.df
+
     if(typeof(table.geom[1]) !== sfgeom)
         error("Geometries are not type `sfgeom` and cannot be written with this function")
     end
@@ -197,15 +138,7 @@ function st_write(fn::AbstractString, table::DataFrame; layer_name::AbstractStri
     rows = Tables.rows(new_df)
     sch = Tables.schema(rows)
     
-    if DataFrames.hasmetadata(new_df) === true
-        meta_df = DataFrames.metadata(new_df)
-        crs = meta_df["crs"]
-    elseif crs !== nothing
-        crs = crs
-    else
-        crs = nothing
-        println("No crs found!")
-    end
+    crs = x.crs
 
     # Determine geometry columns
     isnothing(geom_columns) && error("Please set `geom_columns` or define `GeoInterface.geometrycolumns` for $(typeof(new_df))")
