@@ -43,9 +43,11 @@ function _geom_to_multi(x::DataFrame, geom_type::AG.OGRwkbGeometryType)
 end
 
 
-function geom_to_multigeom(x::DataFrame, geom_type::AG.OGRwkbGeometryType, groupid::Union{String, Nothing}=nothing)    
+function geom_to_multigeom(x::DataFrame, geom_type::AG.OGRwkbGeometryType, groupid::Union{String, Nothing}=nothing; warn::Union{Bool, Nothing}=true)    
     if groupid === nothing
-        println("WARNING: No groupid provided. First attributes used.")
+        if warn === true
+            println("WARNING: No groupid provided. First attributes used.")
+        end
         return _geom_to_multi(x, geom_type)
     end
 
@@ -217,7 +219,7 @@ Hierarchy of `to` values:
 - "multipoint"
 - "point"
 """
-function st_cast(x::SimpleFeature, to::String; groupid::Union{String, Nothing}=nothing)::SimpleFeature
+function st_cast(x::SimpleFeature, to::String; groupid::Union{String, Nothing}=nothing, kwargs...)::SimpleFeature
     geom_type = x.geomtype
     idx_from = findfirst(item -> item ==(geom_type), decompose_types)
     idx_to = findfirst(item -> item ==(to), decompose_names) - 1
@@ -236,7 +238,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String, Nothing}=n
             f = getfield(SimpleFeatures, Symbol(functions[1]))
     
             if occursin("multigeom", functions[1]) === true
-                cx = f(cx, geom_type, groupid)
+                cx = f(cx, geom_type, groupid; kwargs...)
                 new_geom_type = AG.getgeomtype(cx.geom[1])
                 cx[!,:geom] = gdal_to_sfgeom.(cx.geom)
         
@@ -244,7 +246,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String, Nothing}=n
             end
     
             if occursin("multigeom", functions[1]) === false
-                cx = f(cx, geom_type)
+                cx = f(cx, geom_type; kwargs...)
                 new_geom_type = AG.getgeomtype(cx.geom[1])
                 cx[!,:geom] = gdal_to_sfgeom.(cx.geom)
     
@@ -269,7 +271,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String, Nothing}=n
         if length(functions) === 1
             f = getfield(SimpleFeatures, Symbol(functions[1]))
 
-            cx = f(cx, geom_type)
+            cx = f(cx, geom_type; kwargs...)
             new_geom_type = AG.getgeomtype(cx.geom[1])
             cx[!,:geom] = gdal_to_sfgeom.(cx.geom)
 
@@ -280,11 +282,11 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String, Nothing}=n
             f1 = popfirst!(functions)
             f = getfield(SimpleFeatures, Symbol(f1))
 
-            cx = f(cx, geom_type)
+            cx = f(cx, geom_type; kwargs...)
 
             for fx in functions
                 f = getfield(SimpleFeatures, Symbol(fx))
-                cx = f(cx, AG.getgeomtype(cx.geom[1]))
+                cx = f(cx, AG.getgeomtype(cx.geom[1]); kwargs...)
             end
 
             new_geom_type = AG.getgeomtype(cx.geom[1])

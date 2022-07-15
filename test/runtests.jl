@@ -136,6 +136,14 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         @test point_spdf == point_spdf_2
     end
 
+    @testset "combine geometries" begin
+        @test DataFrames.nrow(spdf.df) === 1000
+        combined_spdf = sf.st_combine(spdf)
+        @test DataFrames.nrow(combined_spdf.df) === 1
+        @test occursin("Multi", string(combined_spdf.geomtype))
+
+    end
+
     @testset "segmentize a line" begin
         ls_spdf = sf.st_cast(spdf, "linestring")
         segmented = sf.st_segmentize(ls_spdf, 1)
