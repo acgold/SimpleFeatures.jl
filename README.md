@@ -8,9 +8,42 @@
 ## Working with simple feature GIS data in Julia 
 
 Fast reading, analyzing, manipulating, and writing vector GIS data in Julia. This package:
-- Handles operations as a [**DataFrame**](https://dataframes.juliadata.org/stable/) (i.e., DataFrame in, DataFrame out)
+- Represents feature data as a [**DataFrame**](https://dataframes.juliadata.org/stable/) 
 - Stores coordinate reference system (crs) info with the DataFrame and uses it automatically
 - Interfaces with [**GDAL**](https://gdal.org) and [**GEOS**](https://libgeos.org) (*coming soon!*) for fast operations
+
+# About
+
+`SimpleFeatures` creates a custom type, **a `SimpleFeature` object**, that contains a DataFrame of features, crs info, and geometry type info.
+
+Geometry data within the dataframe are stored as another custom type, an **`sfgeom`** object. This `sfgeom` type contains a geometry's Well-known binary (WKB) representation and a preview of the Well-known text (WKT).  See more below in the section "**More about how it works**".
+
+**Example:**
+
+```julia
+SimpleFeature
+---------
+geomtype:  wkbPolygon
+crs:       PROJCRS["NAD83(2011) / UTM zone 17N",BASEGEOGCRS["NAD83(2011)",DATUM["NAD83 (National Spatial Refere..."
+---------
+features:  
+1000×2 DataFrame
+  Row │ geom                          lyr.1 
+      │ sfgeom                        Int32 
+──────┼─────────────────────────────────────
+    1 │ POLYGON ((853787 3905499,...      1
+    2 │ POLYGON ((853800 3905499,...      1
+    3 │ POLYGON ((853803 3905499,...      1
+  ⋮   │              ⋮                  ⋮
+  998 │ POLYGON ((904045 3905468,...      1
+  999 │ POLYGON ((905355 3905468,...      1
+ 1000 │ POLYGON ((905561 3905469,...      1
+                            994 rows omitted
+```
+
+Functions from this package operate on and return `SimpleFeature` objects. 
+
+To directly access the DataFrame, crs info, or geometry info, just add `.df`, `.crs`, or `.geomtype` at the end of your `SimpleFeature` object's name.
 
 # Installation
 
@@ -29,10 +62,18 @@ import SimpleFeatures as sf
 ```
 
 ## Read & write data
-### Read
-```julia
-df = sf.st_read("data/test.gpkg")
 
+Most GIS types can be read and written using the functions `st_read` and `st_write`, respectively.
+
+```julia
+x = sf.st_read("data/test.gpkg")
+
+SimpleFeature
+---------
+geomtype:  wkbPolygon
+crs:       PROJCRS["NAD83(2011) / UTM zone 17N",BASEGEOGCRS["NAD83(2011)",DATUM["NAD83 (National Spatial Refere..."
+---------
+features:  
 1000×2 DataFrame
   Row │ geom                          lyr.1 
       │ sfgeom                        Int32 
@@ -47,39 +88,11 @@ df = sf.st_read("data/test.gpkg")
                             994 rows omitted
 ```
 
-### Write
 
 ```julia
-df = sf.st_write("data/new_test.gpkg", df)
+sf.st_write("data/new_test.gpkg", x)
 
 "data/new_test.gpkg"
-```
-
-## Metadata
-### View metadata dictionary
-
-```julia
-DataFrames.metadata(df)
-
-Dict{String, Any} with 3 entries:
-    "geomtype"    => wkbPolygon
-    "description" => "description"
-    "crs"         => WellKnownText2{Unknown}(Unknown(), "PROJCRS[\"NAD83(2011)...
-```
-
-### View crs info
-
-```julia
-sf.st_crs(df)
-
-GeoFormatTypes.WellKnownText2{GeoFormatTypes.Unknown}(GeoFormatTypes.Unknown(), "PROJCRS[\"NAD83(2011) / UTM zone 17N\",BASEGEOGCRS[\"NAD83(2011)\",
-```
-
-### View geometry type info
-```julia
-sf.st_geomtype(df)
-
-wkbPolygon::OGRwkbGeometryType = 3
 ```
 
 ## Operations
@@ -95,20 +108,17 @@ Current functionality is:
 
 ### Cast polygons to linestrings
 
-`SimpleFeatures` casts each polygon to a **multilinestring** and then casts those to **linestrings**. Some polygons had holes (multiple lines per polygon), so the resulting DataFrame has more rows than the original. In cases such as this, `SimpleFeatures` adds a column of the geometry type + "ID" (e.g. `_MultiLineStringID`) that preserves which multigeometry type the split geometry belonged to.
+In this example, `SimpleFeatures` will cast each polygon to a **multilinestring** and then to a **linestrings**. Some polygons had holes (multiple lines per polygon), so the resulting DataFrame has more rows than the original. In cases such as this, `SimpleFeatures` adds a column of the geometry type + "ID" (e.g. `_MultiLineStringID`) that preserves which multigeometry type the split geometry belonged to.
 
 ```julia
-df.geom # to see original geom
-sf.st_cast(df, "linestring")
+lines = sf.st_cast(df, "linestring")
 
-Vector of sfgeom Geometries (n = 1000):
-First 5 geometries 
-  POLYGON ((853787 3905499,...
-  POLYGON ((853800 3905499,...
-  POLYGON ((853803 3905499,...
-  POLYGON ((853810 3905499,...
-  POLYGON ((857114 3905499,...
-  
+SimpleFeature
+---------
+geomtype:  wkbLineString
+crs:       PROJCRS["NAD83(2011) / UTM zone 17N",BASEGEOGCRS["NAD83(2011)",DATUM["NAD83 (National Spatial Refere..."
+---------
+features:  
 1022×3 DataFrame
   Row │ lyr.1  _MultiLineStringID  geom                         
       │ Int32  Int64               sfgeom                       
@@ -123,51 +133,43 @@ First 5 geometries
                                                1016 rows omitted
 ```
 ### Buffer
+Using the linestrings from the `st_cast` example above, we will add a 10m buffer.
+
 ```julia
-mls_df = sf.st_cast(df, "multilinestring") # make a df with multilinestrings so we can see our buffer work
-sf.st_buffer(mls_df, 10) # buffer distance is in units of the crs. Meters in this example
+buffered_lines = sf.st_buffer(lines, 10) # buffer distance is in units of the crs. Meters in this example
 
-1000×2 DataFrame
-  Row │ lyr.1  geom                         
-      │ Int32  sfgeom                       
-──────┼─────────────────────────────────────
-    1 │     1  MULTILINESTRING ((853787 ...
-    2 │     1  MULTILINESTRING ((853800 ...
-    3 │     1  MULTILINESTRING ((853803 ...
-  ⋮   │   ⋮                 ⋮
-  998 │     1  MULTILINESTRING ((904045 ...
-  999 │     1  MULTILINESTRING ((905355 ...
- 1000 │     1  MULTILINESTRING ((905561 ...
-                            994 rows omitted
-
-1000×2 DataFrame
-  Row │ lyr.1  geom                         
-      │ Int32  sfgeom                       
-──────┼─────────────────────────────────────
-    1 │     1  POLYGON ((853787 3905509,...
-    2 │     1  POLYGON ((853800 3905509,...
-    3 │     1  POLYGON ((853803 3905509,...
-  ⋮   │   ⋮                 ⋮
-  998 │     1  POLYGON ((904045 3905478,...
-  999 │     1  POLYGON ((905355 3905478,...
- 1000 │     1  POLYGON ((905556.66461072...
-                            994 rows omitted
+SimpleFeature
+---------
+geomtype:  wkbPolygon
+crs:       PROJCRS["NAD83(2011) / UTM zone 17N",BASEGEOGCRS["NAD83(2011)",DATUM["NAD83 (National Spatial Refere..."
+---------
+features:  
+1022×3 DataFrame
+  Row │ lyr.1  _MultiLineStringID  geom                         
+      │ Int32  Int64               sfgeom                       
+──────┼─────────────────────────────────────────────────────────
+    1 │     1                   1  POLYGON ((853787 3905509,...
+    2 │     1                   2  POLYGON ((853800 3905509,...
+    3 │     1                   3  POLYGON ((853803 3905509,...
+  ⋮   │   ⋮            ⋮                        ⋮
+ 1020 │     1                 998  POLYGON ((904045 3905478,...
+ 1021 │     1                 999  POLYGON ((905355 3905478,...
+ 1022 │     1                1000  POLYGON ((905556.62823740...
+                                               1016 rows omitted
 ```
 
 ### Reproject
+Let's reproject the polygons we just made with `st_buffer`.
 
 ```julia
-df.geom # to see original geom
-proj_df = sf.st_transform(df, GeoFormatTypes.EPSG(5070))
+reprojected_buffer = sf.st_transform(x, GeoFormatTypes.EPSG(5070))
 
-Vector of sfgeom Geometries (n = 1000):
-First 5 geometries 
-  POLYGON ((853787 3905499,...
-  POLYGON ((853800 3905499,...
-  POLYGON ((853803 3905499,...
-  POLYGON ((853810 3905499,...
-  POLYGON ((857114 3905499,...
-
+SimpleFeature
+---------
+geomtype:  wkbPolygon
+crs:   5070
+---------
+features:  
 1000×2 DataFrame
   Row │ lyr.1  geom                         
       │ Int32  sfgeom                       
@@ -207,29 +209,29 @@ Each row is a feature, and geometry data for each feature are stored in the `geo
                             994 rows omitted
 ```
 
-## Metadata
+## Metadata: crs and geomtype
 
-Stores information about the GIS data in DataFrame metadata (from [upcoming release](https://github.com/JuliaData/DataFrames.jl/tree/bk/metadata) of DataFrames.jl).
+These metadata (`.crs`, `.geomtype`) are stored as a attributes within a `SimpleFeature` object and can be modified or accessed directly.
 
-Metadata are stored as a Dictionary, and there are numerous SimpleFeatures functions that handling viewing, copying, and updating this metadata (e.g., `st_crs`, `st_geomtype`, etc.)
-
-Currently supports:
-- crs info (type: [`GeoFormatTypes.GeoFormat`](https://juliageo.org/GeoFormatTypes.jl/stable/#GeoFormatTypes.GeoFormat))
-- geometry type (type: [`ArchGDAL.OGRwkbGeometryType`](https://yeesian.com/ArchGDAL.jl/latest/reference/#ArchGDAL.OGRwkbGeometryType))
-- description (*not yet implemented*)
-
-**Example**
-
+**Example**:
 ```julia
-Dict{String, Any} with 3 entries:
-  "geomtype"    => wkbPolygon
-  "description" => "description"
-  "crs"         => WellKnownText2{Unknown}(Unknown(), "PROJCRS[\"NAD83(2011)...
+x.crs 
+
+GeoFormatTypes.WellKnownText2{GeoFormatTypes.Unknown}(GeoFormatTypes.Unknown(), "PROJCRS[\"NAD83(2011) / UTM zone 17N\",BASEGEOGCRS[\"NAD83(2011)\",DATUM[...
 ```
 
-## `sfgeom` objects
+```julia
+x.geomtype
 
-Each row of the `geom` column is a `SimpleFeatures` `sfgeom` object that has two attributes:
+wkbPolygon::OGRwkbGeometryType = 3
+```
+Types:
+- crs: [`GeoFormatTypes.GeoFormat`](https://juliageo.org/GeoFormatTypes.jl/stable/#GeoFormatTypes.GeoFormat)
+- geomtype: [`ArchGDAL.OGRwkbGeometryType`](https://yeesian.com/ArchGDAL.jl/latest/reference/#ArchGDAL.OGRwkbGeometryType)
+
+## Geometries as `sfgeom` objects
+
+Each row of the `geom` column is an `sfgeom` object that has two attributes:
 - `wkb`: A vector (type `Vector{UInt8}`) of the [Well-known binary (WKB)](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry#Well-known_binary) representation of the geometry.
 
     **Example:**

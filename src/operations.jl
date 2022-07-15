@@ -3,24 +3,15 @@
 
 Create a new `DataFrame` that is projected to the provided `crs`. The resulting object is stored in memory as a GeoPackage by default, but a filename `fn` can be provided. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function st_transform(x::DataFrame, crs::GFT.GeoFormat; geom_columns=(:geom,), src_crs::Union{Nothing, GFT.GeoFormat}=nothing)::DataFrame
-    if st_is_spdf(x) === true
-        x_crs = st_crs(x)
-    elseif src_crs !== nothing
-        x_crs = src_crs
-    else
-        error("No crs found! Either add crs to metadata or provide the crs with `src_crs")
-    end
+function st_transform(x::SimpleFeature, crs::GFT.GeoFormat; geom_columns=(:geom,), src_crs::Union{Nothing, GFT.GeoFormat}=nothing)::SimpleFeature
+    geom_list = sfgeom_to_gdal.(x.df.geom)
 
-    geom_list = sfgeom_to_gdal.(x.geom)
+    AG.reproject(geom_list, x.crs, crs)
 
-    AG.reproject(geom_list, x_crs, crs)
-
-    new_df = DataFrames.select(x, Not(:geom))
+    new_df = DataFrames.select(x.df, Not(:geom))
     new_df[:,:geom] = gdal_to_sfgeom.(geom_list)
 
-    st_set_crs(new_df, crs)
-    return new_df
+    return SimpleFeature(new_df, crs, x.geomtype)
 end
 
 """
@@ -28,37 +19,40 @@ end
 
 Create a new `DataFrame` that is buffered by the provided distance `d` in units of the crs. The resulting object is stored in memory as a GeoPackage by default, but a filename `fn` can be provided. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function st_buffer(x::DataFrame, d::Number; geom_columns=(:geom,))::DataFrame
-    if st_is_spdf(x) !== true
-        error("Input does not contain the required metadata or geometry column")
-    end
-
-    geom_list = sfgeom_to_gdal.(x.geom)
+function st_buffer(x::SimpleFeature, d::Number; geom_columns=(:geom,))::SimpleFeature
+    geom_list = sfgeom_to_gdal.(x.df.geom)
 
     buffer_list = AG.buffer.(geom_list, d)
 
-    new_df = DataFrames.select(x, Not(:geom))
+    new_df = DataFrames.select(x.df, Not(:geom))
     new_df[!,:geom] = gdal_to_sfgeom.(buffer_list)
         
-    return new_df
+    return SimpleFeature(new_df, x.crs, AG.getgeomtype(buffer_list[1]))
 end
+
+"""
+    st_area(x::SimpleFeature; geom_columns=(:geom,))
+
+Returns a vector of geometry areas in units of the crs. The `geom_column` is expected to hold ArchGDAL geometries.
+"""
+function st_area(x::SimpleFeature)::Vector
+    geom_list = sfgeom_to_gdal.(x.df.geom)
+    return AG.geomarea.(geom_list)
+end
+
 
 """
     st_segmentize(x::DataFrame, max_length::Number; geom_columns=(:geom,))
 
 Create a new `DataFrame` that contains LineString geometries that have been sliced into lines of `max_length`. The resulting object is stored in memory as a GeoPackage by default, but a filename `fn` can be provided. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function st_segmentize(x::DataFrame, max_length::Number; geom_columns=(:geom,))::DataFrame
-    if st_is_spdf(x) !== true
-        error("Input does not contain the required metadata or geometry column")
-    end
-
-    geom_list = sfgeom_to_gdal.(x.geom)
+function st_segmentize(x::SimpleFeature, max_length::Number; geom_columns=(:geom,))::SimpleFeature
+    geom_list = sfgeom_to_gdal.(x.df.geom)
 
     segmented_list = AG.segmentize!.(geom_list, max_length)
 
-    new_df = DataFrames.select(x, Not(:geom))
+    new_df = DataFrames.select(x.df, Not(:geom))
     new_df[!,:geom] = gdal_to_sfgeom.(segmented_list)
     
-    return new_df
+    return SimpleFeature(new_df, x.crs, x.geomtype)
 end
