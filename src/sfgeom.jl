@@ -5,24 +5,24 @@ mutable struct sfgeom
 end
 
 # Define printing behavior to show preview of WKT
-function Base.show(io::IO, x::sfgeom) 
+function Base.show(io::IO, x::sfgeom)
     print(io, x.preview)
 end
 
 
 function Base.show(io::IO, ::MIME"text/plain", x::Vector{sfgeom})
     x_length = length(x)
-    
-    println(io, "Vector of sfgeom Geometries (n = $x_length):") 
+
+    println(io, "Vector of sfgeom Geometries (n = $x_length):")
 
     if length(x) > 5
-        printstyled(io, "First 5 geometries \n"; color= :blue) 
+        printstyled(io, "First 5 geometries \n"; color=:blue)
         for i in eachindex(x)[1:5]
             println(io, "  ", x[i].preview)
         end
 
         println()
-    else 
+    else
         for i in eachindex(x)
             println(io, "  ", x[i].preview)
         end
@@ -35,7 +35,7 @@ Base.:(==)(a::sfgeom, b::sfgeom) = a.wkb == b.wkb && a.preview == b.preview
 # functions for parsing WKT from GDAL and GEOS for preview
 function preview_wkt_gdal(x::AG.AbstractGeometry, n::Int=25)
     wkt = AG.toWKT(x)
-    return wkt[1:min(length(wkt),n)] * "..."
+    return wkt[1:min(length(wkt), n)] * "..."
 end
 
 # function preview_wkt_geos(x::LibGEOS.AbstractGeometry, n::Int=25)

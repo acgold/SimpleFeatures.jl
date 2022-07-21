@@ -90,7 +90,7 @@ end
 function st_read(ds, layer)
     df = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
-            throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"));
+            throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
         end
 
         crs = GFT.WellKnownText2(toWKT2(AG.getspatialref(table)))
@@ -104,7 +104,9 @@ function st_read(ds, layer)
             push!(sfgeom_list, sfgeom(AG.toWKB(row.geom), preview_wkt_gdal(row.geom)))
         end
 
-        df[!,:geom] = sfgeom_list
+        df[!, :geom] = sfgeom_list
+        DataFrames.select!(df, Not(:geom), :geom)
+
 
         sf_df = SimpleFeature(df, crs, geomtype)
 
@@ -122,10 +124,10 @@ Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGD
 function st_write(fn::AbstractString, x::SimpleFeature; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=(:geom,), kwargs...)
     table = x.df
 
-    if(typeof(table.geom[1]) !== sfgeom)
+    if (typeof(table.geom[1]) !== sfgeom)
         error("Geometries are not type `sfgeom` and cannot be written with this function")
     end
-    
+
     geom_list = Vector{AG.AbstractGeometry}()
 
     for row in eachrow(table)
@@ -133,11 +135,11 @@ function st_write(fn::AbstractString, x::SimpleFeature; layer_name::AbstractStri
     end
 
     new_df = DataFrames.select(table, Not(:geom))
-    new_df[:,:geom] = geom_list
-    
+    new_df[:, :geom] = geom_list
+
     rows = Tables.rows(new_df)
     sch = Tables.schema(rows)
-    
+
     crs = x.crs
 
     # Determine geometry columns
