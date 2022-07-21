@@ -37,17 +37,22 @@ function Base.show(io::IO, x::SimpleFeature)
     end
 end
 
+"""
+    df_to_sf(x::DataFrame, crs::GFT.GeoFormat=GFT.EPSG(4326); geom_column=:geom)
+
+Convert a DataFrame containing a column of ArchGDAL geometries to a new SimpleFeature object. 
+"""
 function df_to_sf(x::DataFrame, crs::GFT.GeoFormat=GFT.EPSG(4326); geom_column=:geom)
     geom_list = []
 
-    geom_type = AG.getgeomtype(x[1,:geom])
+    geom_type = AG.getgeomtype(x[1,geom_column])
 
-    @showprogress for geom in x[:,geom_column]
+    for geom in x[:,geom_column]
         push!(geom_list, gdal_to_sfgeom(geom))
     end
 
     new_df = DataFrames.select(x, Not(geom_column))
-    new_df[:, :geom] = geom_list
+    new_df[:, geom_column] = geom_list
 
     return SimpleFeature(new_df, crs, geom_type)
 end

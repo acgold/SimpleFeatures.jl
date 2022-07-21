@@ -5,6 +5,7 @@ import GeoFormatTypes as GFT
 using Test
 using Downloads
 import ArchGDAL as AG
+using GeoInterface
 
 const testdatadir = joinpath(@__DIR__, "data")
 isdir(testdatadir) || mkdir(testdatadir)
@@ -159,5 +160,17 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         bbox = sf.st_bbox(spdf)
         @test AG.getgeomtype(bbox) === AG.wkbPolygon
         @test length(GeoInterface.coordinates(bbox)[1]) === 5
+    end
+
+    @testset "df to sf test" begin
+        df = DataFrames.select(spdf.df, Not(:geom))
+        df.geom = sf.sfgeom_to_gdal(spdf.df.geom)
+
+        @test typeof(df) === DataFrame
+        @test typeof(df.geom[1]) === AG.IGeometry{AG.wkbPolygon}
+
+        copy_spdf = sf.df_to_sf(df, spdf.crs)
+        @test typeof(copy_spdf) === sf.SimpleFeature
+        @test copy_spdf == spdf
     end
 end

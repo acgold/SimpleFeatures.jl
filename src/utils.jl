@@ -1,5 +1,6 @@
 """
     toProjJSON(spref::AbstractSpatialRef)
+
 Convert this SRS into ProjJSON format.
 """
 function toProjJSON(spref::AG.AbstractSpatialRef)::Dict
@@ -13,6 +14,7 @@ end
 
 """
     toWKT2(spref::AbstractSpatialRef)
+    
 Convert this SRS into WKT2 format.
 """
 function toWKT2(spref::AG.AbstractSpatialRef)::String
