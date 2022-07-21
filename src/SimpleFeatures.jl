@@ -7,6 +7,7 @@ import GeoFormatTypes as GFT
 using GeoInterface
 using GDAL
 using JSON
+using ProgressMeter
 
 include("simplefeature.jl")
 include("sfgeom.jl")

@@ -3,13 +3,13 @@
 
 Create a new `DataFrame` that is projected to the provided `crs`. The resulting object is stored in memory as a GeoPackage by default, but a filename `fn` can be provided. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function st_transform(x::SimpleFeature, crs::GFT.GeoFormat; geom_columns=(:geom,), src_crs::Union{Nothing, GFT.GeoFormat}=nothing, order=:compliant)::SimpleFeature
+function st_transform(x::SimpleFeature, crs::GFT.GeoFormat; geom_columns=(:geom,), src_crs::Union{Nothing,GFT.GeoFormat}=nothing, order=:compliant)::SimpleFeature
     geom_list = sfgeom_to_gdal.(x.df.geom)
 
     AG.reproject(geom_list, x.crs, crs; order=order)
 
     new_df = DataFrames.select(x.df, Not(:geom))
-    new_df[:,:geom] = gdal_to_sfgeom.(geom_list)
+    new_df[:, :geom] = gdal_to_sfgeom.(geom_list)
 
     return SimpleFeature(new_df, crs, x.geomtype)
 end
@@ -25,8 +25,8 @@ function st_buffer(x::SimpleFeature, d::Number; geom_columns=(:geom,))::SimpleFe
     buffer_list = AG.buffer.(geom_list, d)
 
     new_df = DataFrames.select(x.df, Not(:geom))
-    new_df[!,:geom] = gdal_to_sfgeom.(buffer_list)
-        
+    new_df[!, :geom] = gdal_to_sfgeom.(buffer_list)
+
     return SimpleFeature(new_df, x.crs, AG.getgeomtype(buffer_list[1]))
 end
 
@@ -52,31 +52,48 @@ function st_segmentize(x::SimpleFeature, max_length::Number; geom_columns=(:geom
     segmented_list = AG.segmentize!.(geom_list, max_length)
 
     new_df = DataFrames.select(x.df, Not(:geom))
-    new_df[!,:geom] = gdal_to_sfgeom.(segmented_list)
-    
+    new_df[!, :geom] = gdal_to_sfgeom.(segmented_list)
+
     return SimpleFeature(new_df, x.crs, x.geomtype)
 end
 
 """
     st_combine(x::DataFrame; geom_columns=(:geom,))
 
-Create a new SimpleFeature object that has combined all features into the relevant multigeometry type. The `geom_column` is expected to hold ArchGDAL geometries.
+Create a new SimpleFeature object that has combined all features into the relevant multigeometry type. No attributes of the original object are returned. The `geom_column` is expected to hold ArchGDAL geometries.
 """
 function st_combine(x::SimpleFeature)
     # breakdown into single geoms, then multigeom everything
     if occursin("Multi", string(x.geomtype)) === true
         geom_type = x.geomtype
-        idx_from = findfirst(item -> item ==(geom_type), decompose_types)
+        idx_from = findfirst(item -> item == (geom_type), decompose_types)
         multi = decompose_names[idx_from]
-        single = decompose_names[idx_from + 1]
-    
-        return st_cast(st_cast(x, single), multi; warn=false)
+        single = decompose_names[idx_from+1]
+
+        combined = st_cast(st_cast(x, single), multi; warn=false)
+        combined.df = DataFrames.select!(combined.df, :geom)
+
+        return combined
 
     elseif occursin("Multi", string(x.geomtype)) === false
         geom_type = x.geomtype
-        idx_from = findfirst(item -> item ==(geom_type), decompose_types)
-        multi = decompose_names[idx_from - 1]
-    
-        return st_cast(x, multi; warn=false)
+        idx_from = findfirst(item -> item == (geom_type), decompose_types)
+        multi = decompose_names[idx_from-1]
+
+        combined = st_cast(x, multi; warn=false)
+        combined.df = DataFrames.select!(combined.df, :geom)
+
+        return combined
     end
+end
+
+"""
+    st_bbox(x::SimpleFeature; geom_columns=(:geom,))
+
+Create a bounding box polygon for the SimpleFeature object. Resulting polygon is and AG.wkbPolygon type.
+"""
+function st_bbox(x::SimpleFeature)
+    combined_x = st_combine(x)
+    geom = sfgeom_to_gdal(combined_x.df.geom)
+    return AG.boundingbox(geom[1])
 end

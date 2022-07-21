@@ -50,13 +50,13 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         @test typeof(new_geoms) === Vector{sf.sfgeom}
 
         prev_wkt = sf.preview_wkt_gdal(gdal_geom)
-        @test length(prev_wkt) === 28 
+        @test length(prev_wkt) === 28
         @test typeof(prev_wkt) === String
     end
 
 
     # Operations
-    @testset "projecting SimpleFeature w/st_transform" begin        
+    @testset "projecting SimpleFeature w/st_transform" begin
         proj_spdf = sf.st_transform(spdf, GFT.EPSG(5070))
         @test proj_spdf.crs === GFT.EPSG(5070)
         @test spdf.df.geom[1] !== proj_spdf.df.geom[1]
@@ -128,7 +128,7 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         @test ls_spdf_2.geomtype === AG.wkbLineString
         @test multipoint_spdf_2.geomtype === AG.wkbMultiPoint
         @test point_spdf_2.geomtype === AG.wkbPoint
-       
+
         # check if output is same from single and multistep cast
         @test mls_spdf == mls_spdf_2
         @test ls_spdf == ls_spdf_2
@@ -148,10 +148,16 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         ls_spdf = sf.st_cast(spdf, "linestring")
         segmented = sf.st_segmentize(ls_spdf, 1)
 
-         segmented_pts = sf.st_cast(segmented, "point")
-         original_pts = sf.st_cast(ls_spdf, "point")
+        segmented_pts = sf.st_cast(segmented, "point")
+        original_pts = sf.st_cast(ls_spdf, "point")
 
         @test nrow(original_pts.df) === 7572
         @test nrow(segmented_pts.df) === 13950
+    end
+
+    @testset "create bounding box" begin
+        bbox = sf.st_bbox(spdf)
+        @test AG.getgeomtype(bbox) === AG.wkbPolygon
+        @test length(GeoInterface.coordinates(bbox)[1]) === 5
     end
 end
