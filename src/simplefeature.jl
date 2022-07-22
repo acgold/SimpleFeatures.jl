@@ -56,3 +56,19 @@ function df_to_sf(x::DataFrame, crs::GFT.GeoFormat=GFT.EPSG(4326); geom_column=:
 
     return SimpleFeature(new_df, crs, geom_type)
 end
+
+"""
+    sf_to_df(x::SimpleFeature; geom_column=:geom)
+
+Convert a SimpleFeature object to a DataFrame containing a column of ArchGDAL geometries. 
+"""
+function sf_to_df(x::SimpleFeature; geom_column=:geom)
+
+    new_df = deepcopy(x.df)
+    new_df[!, geom_column] = sfgeom_to_gdal(new_df[:, geom_column])
+
+    println("CRS: " * x.crs.val)
+    println()
+
+    return new_df
+end
