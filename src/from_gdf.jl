@@ -96,9 +96,10 @@ function st_read(ds, layer)
         crs = GFT.WellKnownText2(toWKT2(AG.getspatialref(table)))
         geomtype = AG.getgeomtype(table)
         df = DataFrames.DataFrame(table)
-        # n_row = DataFrames.nrow(df);
 
         sfgeom_list = Vector{sfgeom}()
+
+        "" in names(df) && rename!(df, Dict(Symbol("") => :geom,))  
 
         for row in eachrow(df)
             push!(sfgeom_list, sfgeom(AG.toWKB(row.geom), preview_wkt_gdal(row.geom)))
@@ -107,12 +108,11 @@ function st_read(ds, layer)
         df[!, :geom] = sfgeom_list
         DataFrames.select!(df, Not(:geom), :geom)
 
-
         sf_df = SimpleFeature(df, crs, geomtype)
 
         return sf_df
     end
-    "" in names(df.df) && rename!(df.df, Dict(Symbol("") => :geometry,))  # needed for now
+    
     return df
 end
 
