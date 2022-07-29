@@ -1,9 +1,26 @@
 # Define sfdf type
 mutable struct SimpleFeature
-    df::DataFrame
+    df::AbstractDataFrame
     crs::GFT.GeoFormat
     geomtype::AG.OGRwkbGeometryType
 end
+
+
+# Base.getindex(a::SimpleFeature, b) = Base.getindex(a.df, b)
+
+DataFrames.select(df::SimpleFeature, args...; copycols::Bool=true, renamecols::Bool=true) = SimpleFeature(DataFrames.select(df.df, args...; copycols=copycols, renamecols=renamecols), df.crs, df.geomtype)
+DataFrames.select!(df::SimpleFeature, args...; renamecols::Bool=true) = SimpleFeature(DataFrames.select!(df.df, args...; renamecols=renamecols), df.crs, df.geomtype)
+
+DataFrames.transform(df::SimpleFeature, args...; copycols::Bool=true, renamecols::Bool=true) = SimpleFeature(DataFrames.transform(df.df, args...; copycols=copycols, renamecols=renamecols), df.crs, df.geomtype)
+DataFrames.transform!(df::SimpleFeature, args...; renamecols::Bool=true) = SimpleFeature(DataFrames.transform!(df.df, args...; renamecols=renamecols), df.crs, df.geomtype)
+
+DataFrames.combine(df::SimpleFeature, args...; renamecols::Bool=true) = SimpleFeature(DataFrames.combine(df.df, args...; renamecols=renamecols), df.crs, df.geomtype)
+
+DataFrames.subset(df::SimpleFeature, args...; skipmissing::Bool=false, view::Bool=false) = SimpleFeature(DataFrames.subset(df.df, args...; skipmissing=skipmissing, view=view), df.crs, df.geomtype)
+DataFrames.subset!(df::SimpleFeature, args...; skipmissing::Bool=false) = SimpleFeature(DataFrames.subset(df.df, args...; skipmissing=skipmissing), df.crs, df.geomtype)
+
+DataFrames.first(df::SimpleFeature, n::Core.Integer=5) = SimpleFeature(DataFrames.first(df.df, n), df.crs, df.geomtype)
+DataFrames.last(df::SimpleFeature, n::Core.Integer=5) = SimpleFeature(DataFrames.last(df.df, n), df.crs, df.geomtype)
 
 Base.:(==)(a::SimpleFeature, b::SimpleFeature) = a.df == b.df && a.crs == b.crs && a.geomtype == b.geomtype
 
