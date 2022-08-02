@@ -46,6 +46,7 @@ function st_buffer(x::SimpleFeature, d::Union{String,Symbol}; geom_column=:geom)
     return SimpleFeature(new_df, x.crs, geom_type)
 end
 
+
 """
     st_area(x::SimpleFeature; geom_column=:geom)
 

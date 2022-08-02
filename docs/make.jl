@@ -16,6 +16,10 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Getting started" => "getting_started.md",
+        "How it works" => "how_it_works.md",
+        "Long-term goals" => "long_term_goals.md",
+        "Reference" => "reference.md"
     ],
 )
 

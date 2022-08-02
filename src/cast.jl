@@ -60,7 +60,7 @@ function geom_to_multigeom(x::DataFrame, geom_type::AG.OGRwkbGeometryType, group
     end
 
     new_df = DataFrames.DataFrame()
-    for df in groupby(x, groupid)
+    for df in DataFrames.groupby(x, groupid)
         append!(new_df, _geom_to_multi(DataFrames.DataFrame(df), geom_type; geom_column=geom_column))
     end
 

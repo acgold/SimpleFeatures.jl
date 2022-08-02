@@ -6,6 +6,7 @@ using Test
 using Downloads
 import ArchGDAL as AG
 using GeoInterface
+using DataFramesMeta
 
 const testdatadir = joinpath(@__DIR__, "data")
 isdir(testdatadir) || mkdir(testdatadir)
@@ -173,4 +174,42 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         @test typeof(copy_spdf) === sf.SimpleFeature
         @test copy_spdf == spdf
     end
+
+    @testset "Indexing test" begin
+        @test typeof(spdf[:, :geom]) === Vector{sf.sfgeom}
+        @test typeof(spdf[1, :geom]) === sf.sfgeom
+        @test typeof(spdf[1:3, :geom]) === Vector{sf.sfgeom}
+
+        @test typeof(spdf[:, :]) === sf.SimpleFeature
+        @test typeof(spdf[1, :]) === sf.SimpleFeature
+        @test typeof(spdf[1:3, :]) === sf.SimpleFeature
+
+        @test typeof(spdf[:, 1:2]) === sf.SimpleFeature
+        @test typeof(spdf[:, ["lyr.1","geom"]]) === sf.SimpleFeature
+
+        copy_spdf = deepcopy(spdf)
+        copy_spdf[!, :new_col] = copy_spdf[:,"lyr.1"] .+ 1
+        @test ncol(copy_spdf) === 3
+
+        first_rows = first(spdf, 5)
+        @test nrow(first_rows) === 5
+
+        last_rows = last(spdf, 5)
+        @test nrow(last_rows) === 5
+    end
+
+    @testset "DataFrames functions" begin
+        copy_spdf = rename(spdf, Dict("lyr.1" => "lyr1"))
+        @test names(copy_spdf.df)[1] === "lyr1"
+
+        col = @select(copy_spdf, :geom)
+        @test ncol(col) == 1
+
+        new_col = @transform(copy_spdf, :new_col = :lyr1 * 2)
+        @test sum(new_col.df.new_col) === 1654
+
+        subset_col = @subset(copy_spdf, :lyr1 .== 1)
+        @test nrow(subset_col) === 827
+    end
+end
 end

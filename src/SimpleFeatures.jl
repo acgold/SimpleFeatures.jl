@@ -8,6 +8,7 @@ using GeoInterface
 using GDAL
 using JSON
 using DataFramesMeta
+using Lazy
 
 include("simplefeature.jl")
 include("sfgeom.jl")
@@ -15,5 +16,6 @@ include("from_gdf.jl")
 include("utils.jl")
 include("operations.jl")
 include("cast.jl")
+include("conversions.jl")
 
 end
