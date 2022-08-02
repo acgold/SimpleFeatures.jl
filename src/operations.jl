@@ -20,26 +20,26 @@ end
 
 Create a new SimpleFeature object that is buffered by the provided distance `d` in units of the crs. `d` can be a number or a string representing the column of the SimpleFeature DataFrame that contains numbers to use for the buffer distance.
 """
-function st_buffer(x::SimpleFeature, d::Number; geom_column=:geom)::SimpleFeature    
-    geom_list = sfgeom_to_gdal.(x.df[:, geom_column])
+function st_buffer(x::SimpleFeature, d::Real; geom_column=:geom, quadsegs::Int = 32)::SimpleFeature    
+    geom_list = sfgeom_to_geos.(x.df[:, geom_column])
 
-    buffer_list = AG.buffer.(geom_list, d)
+    buffer_list = LibGEOS.buffer.(geom_list, d, quadsegs)
 
     new_df = DataFrames.select(x.df, Not(geom_column))
-    new_df[:, geom_column] = gdal_to_sfgeom.(buffer_list)
+    new_df[:, geom_column] = geos_to_sfgeom.(buffer_list)
 
     geom_type = AG.getgeomtype(sfgeom_to_gdal(new_df[1, geom_column]))
 
     return SimpleFeature(new_df, x.crs, geom_type)
 end
 
-function st_buffer(x::SimpleFeature, d::Union{String,Symbol}; geom_column=:geom)::SimpleFeature
-    geom_list = sfgeom_to_gdal.(x.df[:, geom_column])
+function st_buffer(x::SimpleFeature, d::Union{String,Symbol}; geom_column=:geom, quadsegs::Int = 32)::SimpleFeature
+    geom_list = sfgeom_to_geos.(x.df[:, geom_column])
 
-    buffer_list = AG.buffer.(geom_list, x.df[:, d])
+    buffer_list = LibGEOS.buffer.(geom_list, x.df[:, d], quadsegs)
 
     new_df = DataFrames.select(x.df, Not(geom_column))
-    new_df[:, geom_column] = gdal_to_sfgeom.(buffer_list)
+    new_df[:, geom_column] = geos_to_sfgeom.(buffer_list)
 
     geom_type = AG.getgeomtype(sfgeom_to_gdal(new_df[1, geom_column]))
 
@@ -53,8 +53,8 @@ end
 Returns a vector of geometry areas in units of the crs.
 """
 function st_area(x::SimpleFeature; geom_column=:geom)::Vector
-    geom_list = sfgeom_to_gdal.(x.df[:, geom_column])
-    return AG.geomarea.(geom_list)
+    geom_list = sfgeom_to_geos.(x.df[:, geom_column])
+    return LibGEOS.area.(geom_list)
 end
 
 

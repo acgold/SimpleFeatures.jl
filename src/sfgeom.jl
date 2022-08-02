@@ -38,10 +38,10 @@ function preview_wkt_gdal(x::AG.AbstractGeometry, n::Int=25)
     return wkt[1:min(length(wkt), n)] * "..."
 end
 
-# function preview_wkt_geos(x::LibGEOS.AbstractGeometry, n::Int=25)
-#     wkt = LibGEOS.writegeom(x)
-#     return wkt[1:min(length(wkt),n)] * "..."
-# end
+function preview_wkt_geos(x::LibGEOS.AbstractGeometry, n::Int=25)
+    wkt = LibGEOS.writegeom(x)
+    return wkt[1:min(length(wkt),n)] * "..."
+end
 
 # convert sfgeom type to GDAL, and reverse
 function sfgeom_to_gdal(x::Vector{sfgeom})
@@ -72,31 +72,31 @@ function gdal_to_sfgeom(x::AG.AbstractGeometry)
     return sfgeom(AG.toWKB(x), preview_wkt_gdal(x))
 end
 
-# # convert sfgeom type to GEOS, and reverse
-# function sfgeom_to_geos(x::Vector{sfgeom})
-#     geom_list = Vector{LibGEOS.AbstractGeometry}()
+# convert sfgeom type to GEOS, and reverse
+function sfgeom_to_geos(x::Vector{sfgeom})
+    geom_list = Vector{LibGEOS.AbstractGeometry}()
 
-#     for i in x
-#         push!(geom_list, LibGEOS.readgeom(i.wkb))
-#     end
+    for i in x
+        push!(geom_list, LibGEOS.readgeom(i.wkb))
+    end
 
-#     return geom_list
-# end
+    return geom_list
+end
 
-# function sfgeom_to_geos(x::sfgeom)
-#     return LibGEOS.readgeom(x.wkb)
-# end
+function sfgeom_to_geos(x::sfgeom)
+    return LibGEOS.readgeom(x.wkb)
+end
 
-# function geos_to_sfgeom(x::Vector{LibGEOS.AbstractGeometry})
-#     geom_list = Vector{sfgeom}()
+function geos_to_sfgeom(x::Vector{LibGEOS.AbstractGeometry})
+    geom_list = Vector{sfgeom}()
 
-#     for i in x
-#         push!(geom_list, sfgeom(LibGEOS.writegeom(i, LibGEOS.WKBWriter(LibGEOS._context)), preview_wkt_geos(i)))
-#     end
+    for i in x
+        push!(geom_list, sfgeom(LibGEOS.writegeom(i, LibGEOS.WKBWriter(LibGEOS._context)), preview_wkt_geos(i)))
+    end
 
-#     return geom_list
-# end
+    return geom_list
+end
 
-# function geos_to_sfgeom(x::LibGEOS.AbstractGeometry)
-#     return sfgeom(LibGEOS.writegeom(x, LibGEOS.WKBWriter(LibGEOS._context)), preview_wkt_geos(x))
-# end
+function geos_to_sfgeom(x::LibGEOS.AbstractGeometry)
+    return sfgeom(LibGEOS.writegeom(x, LibGEOS.WKBWriter(LibGEOS._context)), preview_wkt_geos(x))
+end

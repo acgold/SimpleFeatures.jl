@@ -9,6 +9,7 @@ using GDAL
 using JSON
 using DataFramesMeta
 using Lazy
+using LibGEOS
 
 include("simplefeature.jl")
 include("sfgeom.jl")
@@ -17,5 +18,6 @@ include("utils.jl")
 include("operations.jl")
 include("cast.jl")
 include("conversions.jl")
+include("predicates.jl")
 
 end

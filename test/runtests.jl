@@ -70,7 +70,7 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         @test original_area == 10133.0
 
         new_area = sum(sf.st_area(buff_spdf))
-        @test new_area > 438440 && new_area < 438470
+        @test new_area > 438450 && new_area < 438475
     end
 
     @testset "st_cast combine - full example" begin
@@ -211,5 +211,4 @@ spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
         subset_col = @subset(copy_spdf, :lyr1 .== 1)
         @test nrow(subset_col) === 827
     end
-end
 end
