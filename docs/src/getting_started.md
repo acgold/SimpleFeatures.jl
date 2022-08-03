@@ -64,15 +64,7 @@ Check out [DataFramesMeta.jl](https://github.com/JuliaData/DataFramesMeta.jl) fo
 
 `SimpleFeatures` offers some basic spatial functions and will offer more in future releases.
 
-Current functionality is:
-- `sf.st_area` : Calculate the area of geometries
-- `st_bbox` : Return a bounding box geometry for the entire `SimpleFeature`
-- `sf.st_buffer` : Buffering (*GDAL. Will be GEOS soon*)
-- `sf.st_cast` : Casting geometries to different types
-- `sf.st_combine` : Combine all geometries in a `SimpleFeature` and drop attributes
-- `sf.st_segmentize` : Segmentizing a line (*GDAL*)
-- `sf.sfgeom_to_gdal`, `sf.gdal_to_sfgeom` : Converting between `sfgeom` objects and GDAL or GEOS (coming soon)
-- `sf.st_transform` : Reprojecting (*GDAL*)
+Check out [Reference](@ref) for a full list of functions available functions. Below are a few examples.
 
 ### Cast polygons to linestrings
 
@@ -151,3 +143,70 @@ features:
  1000 │     1  POLYGON ((1743893.9246629...
                             994 rows omitted
 ```
+
+### Intersection
+Say we have two sets of features (two different SimpleFeature objects, `x` and `y`), and we'd like to find their intersection and preserve their traits. We can do this with `st_intersection`.
+
+```julia
+intersection = sf.st_intersection(x, y)
+
+SimpleFeature
+---------
+geomtype:  wkbPolygon
+crs:       PROJCRS["NAD83(2011) / UTM zone 17N",BASEGEOGCRS["NAD83(2011)",DATUM["NAD83 (National Spatial Refere..."
+---------
+features:  
+357×3 DataFrame
+ Row │ lyr.1  lyr.1_1  geom                         
+     │ Int32  Int32    sfgeom                       
+─────┼──────────────────────────────────────────────
+   1 │     1        1  POLYGON ((853789 3905499,...
+  ⋮  │   ⋮       ⋮                  ⋮
+ 357 │     0        0  POLYGON ((857155 3905468,...
+                                    355 rows omitted
+```
+
+In this example, `y` is a buffered subset of `x`, so both input objects had the same column "lyr.1". When this happens, a suffix will be added to the column from `y` and it will be joined with `x`.
+
+### Area
+
+I wonder what the area of overlap was from the Intersection example? Let's check it out! The result is in units of the crs.
+
+```julia
+area_list = sf.st_area(intersection)
+
+357-element Vector{Float64}:
+  2.0
+  2.0
+  2.0
+  2.0
+  1.0
+  1.0
+  ⋮
+ 36.0
+  1.0
+  1.0
+  1.0
+  1.0
+  1.0
+```
+
+## Plotting
+
+Plot a `SimpleFeature` object using Plots. It will use an equal aspect ratio.
+
+```julia
+using Plots
+
+x = sf.st_read("example.gpkg")
+
+plot(x)
+```
+
+ If you want to specify the fill of geometries based on a column, pass the name of the column to `fill_col`. 
+ 
+ Specify a color palette from [ColorSchemes](https://juliagraphics.github.io/ColorSchemes.jl/stable/basics/#Pre-defined-schemes-1) by passing a palette to `fill`.
+
+ ```julia
+ plot(x, fill = palette(:viridis), fill_col = :cool_value)
+ ```

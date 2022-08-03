@@ -14,13 +14,13 @@ CurrentModule = SimpleFeatures
 Fast reading, analyzing, manipulating, and writing vector GIS data in Julia. This package:
 - Works with feature data as a [**DataFrame**](https://dataframes.juliadata.org/stable/) 
 - Stores coordinate reference system (crs) info with the DataFrame and uses it automatically
-- Uses a custom geometry type to interface with [**GDAL**](https://gdal.org) and [**GEOS**](https://libgeos.org) (*coming soon!*) for fast operations
+- Uses a custom geometry type to interface with [**GDAL**](https://gdal.org) and [**GEOS**](https://libgeos.org) for fast I/O and operations
 
 # About
 
 The `SimpleFeatures` package aims to simplify working with geospatial data in Julia. 
 
-This package currently offers some basic spatial operations (see **Getting started**), and more will be added in the future.
+This package currently offers some basic spatial operations (see **Getting started** and **Reference**), and more will be added in the future. 
 
 This package creates a `SimpleFeature` custom type that effectively functions as a DataFrame containing feature data but also contains projection and geometry type info. See more below in the section "**How it works**".
 
@@ -50,6 +50,8 @@ features:
 
 To directly access the DataFrame, crs info, or geometry info, just add `.df`, `.crs`, or `.geomtype` at the end of your `SimpleFeature` object's name.
 
+> **Disclaimer**: This package is very young and under active development. More tests and checks (e.g., making sure projections match before performing operations) need to be added. See License.md for additional details. 
+
 # Installation
 
 `SimpleFeatures` can be installed from the Pkg REPL (press `]` in the Julia REPL):
@@ -57,7 +59,6 @@ To directly access the DataFrame, crs info, or geometry info, just add `.df`, `.
 ```julia
 pkg> add SimpleFeatures
 ```
-
 Or install from GitHub for the latest:
 
 ```julia

@@ -73,7 +73,7 @@ Each row of the `geom` column is an `sfgeom` object that has two attributes:
 
 
 This data structure allows `SimpleFeatures` to:
-- interface with GDAL and GEOS (coming soon) for fast operations (using using [ArchGDAL.jl](https://github.com/yeesian/ArchGDAL.jl/) and [LibGEOS.jl](https://github.com/JuliaGeo/LibGEOS.jl), respectively)
+- interface with GDAL and GEOS for fast I/O and operations (using using [ArchGDAL.jl](https://github.com/yeesian/ArchGDAL.jl/) and [LibGEOS.jl](https://github.com/JuliaGeo/LibGEOS.jl), respectively)
 - provide a preview of the geometry's WKT for viewing
 - represent geometries (`wkb`) in Julia without needing to define a new SimpleFeatures type for each type of geometry. SimpleFeatures uses ArchGDAL geometry types for geometry type info.
 

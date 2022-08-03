@@ -1,4 +1,9 @@
-function st_intersects(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
+"""
+    st_disjoint(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
+
+Returns a sparse index list of disjoint features (`sparse=true`) or a boolean matrix (`nrow(x) by nrow(y)`) indicating intersection.
+"""
+function st_disjoint(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
     geom_list_x = sfgeom_to_geos.(x[:, geom_column])
     geom_list_y = sfgeom_to_geos.(y[:, geom_column])
 
@@ -13,20 +18,43 @@ function st_intersects(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sp
         int_mat[:,index] = int_col
     end
 
-    if sparse === true
-        sparse_vector = Vector()
+    sparse_vector = Vector()
         
-        for (index,value) in enumerate(int_mat[:,1])
-            push!(sparse_vector,findall(int_mat[index,:]))
-        end
-
-        return sparse_vector
+    for (index,value) in enumerate(int_mat[:,1])
+        push!(sparse_vector,findall(int_mat[index,:]))
     end
 
-    return int_mat
+    disjoint_vector = Vector()
+    for (index,value) in enumerate(sparse_vector)
+        push!(disjoint_vector,[LibGEOS.disjoint(geom_list_x[index], y) for y in geom_list_y[value]])
+    end
+
+    final_sparse = Vector()
+    for i in 1:length(sparse_vector)
+        push!(final_sparse, sparse_vector[i][disjoint_vector[i]])
+    end
+
+    disjoint_mat = int_mat .=== false    
+
+    for i in 1:length(final_sparse)
+        disjoint_mat[i, final_sparse[i]] .= 1
+    end
+
+    disjoint_sparse_vector = Vector()
+
+    for (index,value) in enumerate(disjoint_mat[:,1])
+        push!(disjoint_sparse_vector,findall(disjoint_mat[index,:]))
+    end
+
+    return disjoint_sparse_vector
 end
 
-function st_intersection(x::SimpleFeature, y::SimpleFeature; geom_column=:geom)::SimpleFeature
+"""
+    st_intersects(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
+
+Returns a sparse index list of intersecting features (`sparse=true`) or a boolean matrix (`nrow(x) by nrow(y)`) indicating intersection.
+"""
+function st_intersects(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
     geom_list_x = sfgeom_to_geos.(x[:, geom_column])
     geom_list_y = sfgeom_to_geos.(y[:, geom_column])
 
@@ -49,18 +77,13 @@ function st_intersection(x::SimpleFeature, y::SimpleFeature; geom_column=:geom):
 
     int_vector = Vector()
     for (index,value) in enumerate(sparse_vector)
-        push!(int_vector,[LibGEOS.intersection(geom_list_x[index], y) for y in geom_list_y[value]])
+        push!(int_vector,[LibGEOS.intersects(geom_list_x[index], y) for y in geom_list_y[value]])
     end
 
-    x_vector = findall(isempty.(int_vector) .== false)
-
-    new_x = x[x_vector,:]
-
-    new_df = DataFrame()
-
-    for (index, value) in enumerate(int_vector)
-        [append!(new_df, hcat(DataFrame(x.df[index,:]),DataFrames.select(DataFrame(new_y), Not(geom_column)), makeunique=true)) for new_y in eachrow(y.df[sparse_vector[index],:])]
+    final_sparse = Vector()
+    for i in 1:length(sparse_vector)
+        push!(final_sparse, sparse_vector[i][int_vector[i]])
     end
 
-    return SimpleFeature(new_df, x.crs, x.geomtype) # To-do: check geomtype after intersection
+    return final_sparse
 end
