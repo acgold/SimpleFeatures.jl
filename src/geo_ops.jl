@@ -251,6 +251,7 @@ function st_union(x::SimpleFeature; geom_column=:geom)
     geom_list = sfgeom_to_geos.(combined_x.df[:, geom_column])
 
     combined_x[!,:geom] = [geos_to_sfgeom(LibGEOS.unaryUnion(geom_list[1]))]
-
+    combined_x.geomtype = AG.getgeomtype(sfgeom_to_gdal(combined_x.df.geom[1]))
+    
     return combined_x
 end

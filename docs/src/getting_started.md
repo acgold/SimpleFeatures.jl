@@ -2,10 +2,10 @@
 
 ## Load SimpleFeatures.jl
 
-We'll load the package in these examples as `sf`, shorthand for `SimpleFeatures`
+We'll load the package in these examples as `SF`, shorthand for `SimpleFeatures`
 
 ```julia
-import SimpleFeatures as sf
+import SimpleFeatures as SF
 ```
 
 ## Read & write data
@@ -13,7 +13,7 @@ import SimpleFeatures as sf
 Most GIS types can be read and written using the functions `st_read` and `st_write`, respectively.
 
 ```julia
-x = sf.st_read("data/test.gpkg")
+x = SF.st_read("data/test.gpkg")
 
 SimpleFeature
 ---------
@@ -37,7 +37,7 @@ features:
 
 
 ```julia
-sf.st_write("data/new_test.gpkg", x)
+SF.st_write("data/new_test.gpkg", x)
 
 "data/new_test.gpkg"
 ```
@@ -71,7 +71,7 @@ Check out [Reference](@ref) for a full list of functions available functions. Be
 In this example, `SimpleFeatures` will cast each polygon to a **multilinestring** and then to a **linestrings**. Some polygons had holes (multiple lines per polygon), so the resulting DataFrame has more rows than the original. In cases such as this, `SimpleFeatures` adds a column of the geometry type + "ID" (e.g. `_MultiLineStringID`) that preserves which multigeometry type the split geometry belonged to.
 
 ```julia
-lines = sf.st_cast(df, "linestring")
+lines = SF.st_cast(df, "linestring")
 
 SimpleFeature
 ---------
@@ -96,7 +96,7 @@ features:
 Using the linestrings from the `st_cast` example above, we will add a 10m buffer.
 
 ```julia
-buffered_lines = sf.st_buffer(lines, 10) # buffer distance is in units of the crs. Meters in this example
+buffered_lines = SF.st_buffer(lines, 10) # buffer distance is in units of the crs. Meters in this example
 
 SimpleFeature
 ---------
@@ -122,7 +122,7 @@ features:
 Let's reproject the polygons we just made with `st_buffer`.
 
 ```julia
-reprojected_buffer = sf.st_transform(x, GeoFormatTypes.EPSG(5070))
+reprojected_buffer = SF.st_transform(x, GeoFormatTypes.EPSG(5070))
 
 SimpleFeature
 ---------
@@ -148,7 +148,7 @@ features:
 Say we have two sets of features (two different SimpleFeature objects, `x` and `y`), and we'd like to find their intersection and preserve their traits. We can do this with `st_intersection`.
 
 ```julia
-intersection = sf.st_intersection(x, y)
+intersection = SF.st_intersection(x, y)
 
 SimpleFeature
 ---------
@@ -173,7 +173,7 @@ In this example, `y` is a buffered subset of `x`, so both input objects had the 
 I wonder what the area of overlap was from the Intersection example? Let's check it out! The result is in units of the crs.
 
 ```julia
-area_list = sf.st_area(intersection)
+area_list = SF.st_area(intersection)
 
 357-element Vector{Float64}:
   2.0
@@ -198,7 +198,7 @@ Plot a `SimpleFeature` object using Plots. It will use an equal aspect ratio.
 ```julia
 using Plots
 
-x = sf.st_read("example.gpkg")
+x = SF.st_read("example.gpkg")
 
 plot(x)
 ```

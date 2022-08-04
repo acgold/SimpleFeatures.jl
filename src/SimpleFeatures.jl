@@ -5,7 +5,6 @@ using DataFrames
 using Tables
 import GeoFormatTypes as GFT
 using GeoInterface
-using GDAL
 using JSON
 using DataFramesMeta
 using Lazy
