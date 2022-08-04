@@ -1,7 +1,7 @@
 """
     st_disjoint(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
 
-Returns a sparse index list of disjoint features (`sparse=true`) or a boolean matrix (`nrow(x) by nrow(y)`) indicating intersection.
+Returns a sparse index list of disjoint features.
 """
 function st_disjoint(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
     geom_list_x = sfgeom_to_geos.(x[:, geom_column])
@@ -52,9 +52,9 @@ end
 """
     st_intersects(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
 
-Returns a sparse index list of intersecting features (`sparse=true`) or a boolean matrix (`nrow(x) by nrow(y)`) indicating intersection.
+Returns a sparse index list of intersecting features.
 """
-function st_intersects(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
+function st_intersects(x::SimpleFeature, y::SimpleFeature; geom_column=:geom)
     geom_list_x = sfgeom_to_geos.(x[:, geom_column])
     geom_list_y = sfgeom_to_geos.(y[:, geom_column])
 

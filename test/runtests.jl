@@ -1,9 +1,8 @@
 using Revise
-import SimpleFeatures as sf
+import SimpleFeatures as SF
 using DataFrames
 import GeoFormatTypes as GFT
 using Test
-using Downloads
 import ArchGDAL as AG
 using GeoInterface
 using DataFramesMeta
@@ -11,204 +10,277 @@ using DataFramesMeta
 const testdatadir = joinpath(@__DIR__, "data")
 isdir(testdatadir) || mkdir(testdatadir)
 
-Downloads.download("https://github.com/acgold/SimpleFeatures.jl/raw/main/test/data/test.gpkg", joinpath(testdatadir, "test.gpkg"))
-
-spdf = sf.st_read(joinpath(testdatadir, "test.gpkg"))
+# create SimpleFeature objects from file
+include("generate_SFs.jl");
 
 @testset "SimpleFeatures.jl" begin
     # IO
-    @testset "Reading spatial DataFrame" begin
-        @test DataFrames.nrow(spdf.df) === 1000
-        @test typeof(spdf.crs) === GFT.WellKnownText2{GFT.Unknown}
-        @test typeof(spdf) === sf.SimpleFeature
+    @testset "Writing SimpleFeature object" begin
+        SF.st_write(joinpath(testdatadir, "test.gpkg"), polygons)
+        @test isfile(joinpath(testdatadir, "test.gpkg"))
     end
 
-    @testset "Writing spatial DataFrame" begin
-        sf.st_write(joinpath(testdatadir, "new_test.gpkg"), spdf)
-        @test isfile(joinpath(testdatadir, "new_test.gpkg"))
-        new_spdf = sf.st_read(joinpath(testdatadir, "new_test.gpkg"))
-        @test typeof(new_spdf) === sf.SimpleFeature
-        @test spdf == new_spdf
+    @testset "Reading SimpleFeature object" begin
+        polygons = SF.st_read(joinpath(testdatadir, "test.gpkg"))
+        @test typeof(polygons) === SF.SimpleFeature
+        @test DataFrames.nrow(polygons) === 4
+        @test typeof(polygons.crs) === GFT.WellKnownText2{GFT.Unknown}
     end
 
     # sfgeom conversions
     @testset "Converting geoms from sfgeom to gdal and back" begin
-        geom = spdf.df.geom[1]
-        @test typeof(geom) === sf.sfgeom
+        geom = polygons.df.geom[1]
+        @test typeof(geom) === SF.sfgeom
 
-        gdal_geom = sf.sfgeom_to_gdal(geom)
+        gdal_geom = SF.sfgeom_to_gdal(geom)
         @test typeof(gdal_geom) === AG.IGeometry{AG.wkbPolygon}
 
-        new_geom = sf.gdal_to_sfgeom(gdal_geom)
-        @test typeof(new_geom) === sf.sfgeom
+        new_geom = SF.gdal_to_sfgeom(gdal_geom)
+        @test typeof(new_geom) === SF.sfgeom
 
-        geoms = spdf.df.geom[1:10]
-        @test typeof(geoms) === Vector{sf.sfgeom}
+        geoms = polygons.df.geom[1:2]
+        @test typeof(geoms) === Vector{SF.sfgeom}
 
-        gdal_geoms = sf.sfgeom_to_gdal(geoms)
+        gdal_geoms = SF.sfgeom_to_gdal(geoms)
         @test typeof(gdal_geoms) === Vector{AG.AbstractGeometry}
 
-        new_geoms = sf.gdal_to_sfgeom(gdal_geoms)
-        @test typeof(new_geoms) === Vector{sf.sfgeom}
+        new_geoms = SF.gdal_to_sfgeom(gdal_geoms)
+        @test typeof(new_geoms) === Vector{SF.sfgeom}
 
-        prev_wkt = sf.preview_wkt_gdal(gdal_geom)
+        prev_wkt = SF.preview_wkt_gdal(gdal_geom)
         @test length(prev_wkt) === 28
         @test typeof(prev_wkt) === String
     end
 
-
     # Operations
     @testset "projecting SimpleFeature w/st_transform" begin
-        proj_spdf = sf.st_transform(spdf, GFT.EPSG(5070))
-        @test proj_spdf.crs === GFT.EPSG(5070)
-        @test spdf.df.geom[1] !== proj_spdf.df.geom[1]
+        proj_polygons = SF.st_transform(polygons, GFT.EPSG(5070))
+        @test proj_polygons.crs === GFT.EPSG(5070)
+        @test polygons.df.geom[1] !== proj_polygons.df.geom[1]
     end
 
     @testset "buffer spatial DataFrame" begin
-        buff_spdf = sf.st_buffer(spdf, 10)
-        original_area = sum(sf.st_area(spdf))
-        @test original_area == 10133.0
+        buff_polygons = SF.st_buffer(polygons, 10)
+        original_area = sum(SF.st_area(polygons))
+        @test isapprox(original_area, 39271.80464290353)
 
-        new_area = sum(sf.st_area(buff_spdf))
-        @test new_area > 438450 && new_area < 438475
+        new_area = sum(SF.st_area(buff_polygons))
+        @test isapprox(new_area, 66529.84952521359)
     end
 
     @testset "st_cast combine - full example" begin
         # aggregate from Point -> MultiPolygon by 1 step
-        point_spdf = sf.st_cast(spdf, "point")
+        point_polygons = SF.st_cast(polygons, "point")
 
-        multipoint_spdf = sf.st_cast(point_spdf, "multipoint", groupid="_MultiPointID")
-        ls_spdf = sf.st_cast(multipoint_spdf, "linestring")
-        mls_spdf = sf.st_cast(ls_spdf, "multilinestring"; groupid="_MultiLineStringID")
-        polygon_spdf = sf.st_cast(mls_spdf, "polygon")
-        multipolygon_spdf = sf.st_cast(polygon_spdf, "multipolygon"; groupid="lyr.1")
+        multipoint_polygons = SF.st_cast(point_polygons, "multipoint", groupid="_MultiPointID")
+        ls_polygons = SF.st_cast(multipoint_polygons, "linestring")
+        mls_polygons = SF.st_cast(ls_polygons, "multilinestring"; groupid="_MultiLineStringID")
+        polygon_polygons = SF.st_cast(mls_polygons, "polygon")
+        multipolygon_polygons = SF.st_cast(polygon_polygons, "multipolygon"; groupid="way_id")
 
         # check geom types following 1 step aggregate
-        @test multipolygon_spdf.geomtype === AG.wkbMultiPolygon
-        @test polygon_spdf.geomtype === AG.wkbPolygon
-        @test mls_spdf.geomtype === AG.wkbMultiLineString
-        @test ls_spdf.geomtype === AG.wkbLineString
-        @test multipoint_spdf.geomtype === AG.wkbMultiPoint
-        @test point_spdf.geomtype === AG.wkbPoint
+        @test multipolygon_polygons.geomtype === AG.wkbMultiPolygon
+        @test polygon_polygons.geomtype === AG.wkbPolygon
+        @test mls_polygons.geomtype === AG.wkbMultiLineString
+        @test ls_polygons.geomtype === AG.wkbLineString
+        @test multipoint_polygons.geomtype === AG.wkbMultiPoint
+        @test point_polygons.geomtype === AG.wkbPoint
 
-        @test nrow(point_spdf.df) === 7572
-        @test nrow(multipoint_spdf.df) === 1022
-        @test nrow(ls_spdf.df) === 1022
-        @test nrow(mls_spdf.df) === 1000
-        @test nrow(polygon_spdf.df) === 1000
-        @test nrow(multipolygon_spdf.df) === 2
+        @test nrow(point_polygons.df) === 492
+        @test nrow(multipoint_polygons.df) === 4
+        @test nrow(ls_polygons.df) === 4
+        @test nrow(mls_polygons.df) === 4
+        @test nrow(polygon_polygons.df) === 4
+        @test nrow(multipolygon_polygons.df) === 2
     end
 
     @testset "Cast multipolygon to point - full st_cast test" begin
         # setup
-        @test spdf.geomtype === AG.wkbPolygon
-        mp_spdf = sf.st_cast(spdf, "multipolygon")
-        @test mp_spdf.geomtype === AG.wkbMultiPolygon
+        @test polygons.geomtype === AG.wkbPolygon
+        mp_polygons = SF.st_cast(polygons, "multipolygon")
+        @test mp_polygons.geomtype === AG.wkbMultiPolygon
 
         # cast from MultiPolygon -> Point by 1 step
-        p_spdf = sf.st_cast(mp_spdf, "polygon")
-        mls_spdf = sf.st_cast(p_spdf, "multilinestring")
-        ls_spdf = sf.st_cast(mls_spdf, "linestring")
-        multipoint_spdf = sf.st_cast(ls_spdf, "multipoint")
-        point_spdf = sf.st_cast(multipoint_spdf, "point")
+        p_polygons = SF.st_cast(mp_polygons, "polygon")
+        mls_polygons = SF.st_cast(p_polygons, "multilinestring")
+        ls_polygons = SF.st_cast(mls_polygons, "linestring")
+        multipoint_polygons = SF.st_cast(ls_polygons, "multipoint")
+        point_polygons = SF.st_cast(multipoint_polygons, "point")
 
         # check geom types following 1 step cast
-        @test p_spdf.geomtype === AG.wkbPolygon
-        @test mls_spdf.geomtype === AG.wkbMultiLineString
-        @test ls_spdf.geomtype === AG.wkbLineString
-        @test multipoint_spdf.geomtype === AG.wkbMultiPoint
-        @test point_spdf.geomtype === AG.wkbPoint
+        @test p_polygons.geomtype === AG.wkbPolygon
+        @test mls_polygons.geomtype === AG.wkbMultiLineString
+        @test ls_polygons.geomtype === AG.wkbLineString
+        @test multipoint_polygons.geomtype === AG.wkbMultiPoint
+        @test point_polygons.geomtype === AG.wkbPoint
 
         # cast from MultiPolygon to geometries more than 1 step down
-        mls_spdf_2 = sf.st_cast(mp_spdf, "multilinestring")
-        ls_spdf_2 = sf.st_cast(mp_spdf, "linestring")
-        multipoint_spdf_2 = sf.st_cast(mp_spdf, "multipoint")
-        point_spdf_2 = sf.st_cast(mp_spdf, "point")
+        mls_polygons_2 = SF.st_cast(mp_polygons, "multilinestring")
+        ls_polygons_2 = SF.st_cast(mp_polygons, "linestring")
+        multipoint_polygons_2 = SF.st_cast(mp_polygons, "multipoint")
+        point_polygons_2 = SF.st_cast(mp_polygons, "point")
 
         # check geom types following multi-step cast
-        @test mls_spdf_2.geomtype === AG.wkbMultiLineString
-        @test ls_spdf_2.geomtype === AG.wkbLineString
-        @test multipoint_spdf_2.geomtype === AG.wkbMultiPoint
-        @test point_spdf_2.geomtype === AG.wkbPoint
+        @test mls_polygons_2.geomtype === AG.wkbMultiLineString
+        @test ls_polygons_2.geomtype === AG.wkbLineString
+        @test multipoint_polygons_2.geomtype === AG.wkbMultiPoint
+        @test point_polygons_2.geomtype === AG.wkbPoint
 
         # check if output is same from single and multistep cast
-        @test mls_spdf == mls_spdf_2
-        @test ls_spdf == ls_spdf_2
-        @test multipoint_spdf == multipoint_spdf_2
-        @test point_spdf == point_spdf_2
+        @test mls_polygons == mls_polygons_2
+        @test ls_polygons == ls_polygons_2
+        @test multipoint_polygons == multipoint_polygons_2
+        @test point_polygons == point_polygons_2
     end
 
-    @testset "combine geometries" begin
-        @test DataFrames.nrow(spdf.df) === 1000
-        combined_spdf = sf.st_combine(spdf)
-        @test DataFrames.nrow(combined_spdf.df) === 1
-        @test occursin("Multi", string(combined_spdf.geomtype))
+    @testset "combine and union geometries" begin
+        @test DataFrames.nrow(polygons.df) === 4
+        combined_polygons = SF.st_combine(polygons)
+        
+        @test DataFrames.nrow(combined_polygons.df) === 1
+        @test combined_polygons.geomtype === AG.wkbMultiPolygon
 
+        unioned_polygons = SF.st_union(polygons)
+        @test DataFrames.nrow(unioned_polygons.df) === 1
+        @test unioned_polygons.geomtype === AG.wkbPolygon
     end
 
-    @testset "segmentize a line" begin
-        ls_spdf = sf.st_cast(spdf, "linestring")
-        segmented = sf.st_segmentize(ls_spdf, 1)
+    @testset "segmentize and simplify a line" begin
+        segmented = SF.st_segmentize(lines, 1)
 
-        segmented_pts = sf.st_cast(segmented, "point")
-        original_pts = sf.st_cast(ls_spdf, "point")
+        segmented_pts = SF.st_cast(segmented, "point")
+        original_pts = SF.st_cast(lines, "point")
 
-        @test nrow(original_pts.df) === 7572
-        @test nrow(segmented_pts.df) === 13950
+        @test nrow(original_pts) === 8
+        @test nrow(segmented_pts) === 1100
+
+        simplified = SF.st_simplify(segmented, 5)
+        simplified_pts = SF.st_cast(simplified, "point")
+        @test nrow(simplified_pts) === 8
     end
 
     @testset "create bounding box" begin
-        bbox = sf.st_bbox(spdf)
+        bbox = SF.st_bbox(polygons)
         @test AG.getgeomtype(bbox) === AG.wkbPolygon
         @test length(GeoInterface.coordinates(bbox)[1]) === 5
     end
 
     @testset "df to sf test" begin
-        df = DataFrames.select(spdf.df, Not(:geom))
-        df.geom = sf.sfgeom_to_gdal(spdf.df.geom)
+        df = DataFrames.select(polygons.df, Not(:geom))
+        df.geom = SF.sfgeom_to_gdal(polygons.df.geom)
 
         @test typeof(df) === DataFrame
         @test typeof(df.geom[1]) === AG.IGeometry{AG.wkbPolygon}
 
-        copy_spdf = sf.df_to_sf(df, spdf.crs)
-        @test typeof(copy_spdf) === sf.SimpleFeature
-        @test copy_spdf == spdf
+        copy_polygons = SF.df_to_sf(df, polygons.crs)
+        @test typeof(copy_polygons) === SF.SimpleFeature
+        @test copy_polygons == polygons
     end
 
     @testset "Indexing test" begin
-        @test typeof(spdf[:, :geom]) === Vector{sf.sfgeom}
-        @test typeof(spdf[1, :geom]) === sf.sfgeom
-        @test typeof(spdf[1:3, :geom]) === Vector{sf.sfgeom}
+        @test typeof(polygons[:, :geom]) === Vector{SF.sfgeom}
+        @test typeof(polygons[1, :geom]) === SF.sfgeom
+        @test typeof(polygons[1:3, :geom]) === Vector{SF.sfgeom}
 
-        @test typeof(spdf[:, :]) === sf.SimpleFeature
-        @test typeof(spdf[1, :]) === sf.SimpleFeature
-        @test typeof(spdf[1:3, :]) === sf.SimpleFeature
+        @test typeof(polygons[:, :]) === SF.SimpleFeature
+        @test typeof(polygons[1, :]) === SF.SimpleFeature
+        @test typeof(polygons[1:3, :]) === SF.SimpleFeature
 
-        @test typeof(spdf[:, 1:2]) === sf.SimpleFeature
-        @test typeof(spdf[:, ["lyr.1","geom"]]) === sf.SimpleFeature
+        @test typeof(polygons[:, 1:2]) === SF.SimpleFeature
+        @test typeof(polygons[:, ["way_id","geom"]]) === SF.SimpleFeature
 
-        copy_spdf = deepcopy(spdf)
-        copy_spdf[!, :new_col] = copy_spdf[:,"lyr.1"] .+ 1
-        @test ncol(copy_spdf) === 3
+        copy_polygons = deepcopy(polygons)
+        copy_polygons[!, :new_col] = copy_polygons[:,"way_id"] .+ 1;
+        @test ncol(copy_polygons) === 5
 
-        first_rows = first(spdf, 5)
-        @test nrow(first_rows) === 5
+        first_rows = first(polygons, 2)
+        @test nrow(first_rows) === 2
 
-        last_rows = last(spdf, 5)
-        @test nrow(last_rows) === 5
+        last_rows = last(polygons, 2)
+        @test nrow(last_rows) === 2
     end
 
     @testset "DataFrames functions" begin
-        copy_spdf = rename(spdf, Dict("lyr.1" => "lyr1"))
-        @test names(copy_spdf.df)[1] === "lyr1"
+        copy_polygons = rename(polygons, Dict("way_id" => "new_way_id"))
+        @test names(copy_polygons.df)[1] === "new_way_id"
 
-        col = @select(copy_spdf, :geom)
+        col = @select(copy_polygons, :geom)
         @test ncol(col) == 1
 
-        new_col = @transform(copy_spdf, :new_col = :lyr1 * 2)
-        @test sum(new_col.df.new_col) === 1654
+        new_col = @transform(copy_polygons, :new_col = :new_way_id * 2)
+        @test sum(new_col.df.new_col) === 1801571088
 
-        subset_col = @subset(copy_spdf, :lyr1 .== 1)
-        @test nrow(subset_col) === 827
+        subset_col = @subset(copy_polygons, :new_way_id .== 16461591)
+        @test nrow(subset_col) === 1
+    end
+
+    @testset "Find centroid" begin
+        centroids = SF.st_centroid(polygons)
+
+        @test AG.getgeomtype(SF.sfgeom_to_gdal(centroids.df.geom[1])) === AG.wkbPoint
+        @test nrow(centroids) === 4
+    end
+
+    @testset "Find nearest points" begin
+        polygon_1 = polygons[1,:]
+        line_4 = lines[4,:]
+
+        nrst_pts = SF.st_nearest_points(polygon_1, line_4)
+
+        @test AG.getgeomtype(SF.sfgeom_to_gdal(nrst_pts.df.geom[1])) === AG.wkbLineString
+        @test isapprox(SF.st_length(nrst_pts)[1], 20.885955693556273)
+    end
+
+    @testset "distance matrix" begin
+        polygon_1 = polygons[1,:]
+
+        distances = SF.st_distance(polygon_1, lines)
+        @test typeof(distances) === Matrix{Real}
+        @test length(distances) == 4
+        @test sum(distances) > 20 
+    end
+
+    @testset "Calculate intersection" begin
+        polygon_1 = polygons[1,:]
+        line_2 = lines[2,:]
+
+        # Calc intersection
+        int = SF.st_intersection(polygon_1, line_2)
+
+        # Make sure geomtype is a line and length is approx \
+        @test AG.getgeomtype(SF.sfgeom_to_gdal(int.df.geom[1])) === AG.wkbLineString
+        @test isapprox(SF.st_length(int)[1], 16.402552599279197)
+
+        # Do intersection w/polygons
+        buffered_line_2 = SF.st_buffer(line_2, 10)
+        int_buffered = SF.st_intersection(polygon_1, buffered_line_2)
+
+        # Check that it returns polygons and area is about right
+        @test AG.getgeomtype(SF.sfgeom_to_gdal(int_buffered.df.geom[1])) === AG.wkbPolygon
+        @test isapprox(SF.st_area(int_buffered)[1], 474.0340208116075)
+
+        # Check that attributes were combined from the two inputs
+        @test int_buffered.df.line_number[1] == 2
+    end
+
+    @testset "Calculate difference" begin
+        polygon_1 = polygons[1,:]
+        line_2 = lines[2,:]
+        buffered_line_2 = SF.st_buffer(line_2, 10)
+
+        difference = SF.st_difference(polygon_1, buffered_line_2)
+
+        @test AG.getgeomtype(SF.sfgeom_to_gdal(difference.df.geom[1])) === AG.wkbPolygon
+        @test SF.st_area(difference)[1] < SF.st_area(polygon_1)[1]
+    end
+
+    @testset "Binary predicates" begin
+        polygon_1 = polygons[1,:]
+
+        intersects = SF.st_intersects(polygon_1, lines)
+        @test intersects == [[1, 2, 3]]
+
+        disjoint = SF.st_disjoint(polygon_1, lines)
+        @test disjoint == [[4]]
     end
 end
