@@ -32,22 +32,22 @@ include("generate_SFs.jl");
         geom = polygons.df.geom[1]
         @test typeof(geom) === SF.sfgeom
 
-        gdal_geom = SF.sfgeom_to_gdal(geom)
+        gdal_geom = SF.from_sfgeom(geom, to = "archgdal")
         @test typeof(gdal_geom) === AG.IGeometry{AG.wkbPolygon}
 
-        new_geom = SF.gdal_to_sfgeom(gdal_geom)
+        new_geom = SF.to_sfgeom(gdal_geom)
         @test typeof(new_geom) === SF.sfgeom
 
         geoms = polygons.df.geom[1:2]
         @test typeof(geoms) === Vector{SF.sfgeom}
 
-        gdal_geoms = SF.sfgeom_to_gdal(geoms)
+        gdal_geoms = SF.from_sfgeom(geoms, to = "archgdal")
         @test typeof(gdal_geoms) === Vector{AG.AbstractGeometry}
 
-        new_geoms = SF.gdal_to_sfgeom(gdal_geoms)
+        new_geoms = SF.to_sfgeom(gdal_geoms)
         @test typeof(new_geoms) === Vector{SF.sfgeom}
 
-        prev_wkt = SF.preview_wkt_gdal(gdal_geom)
+        prev_wkt = SF.preview_wkt(gdal_geom)
         @test length(prev_wkt) === 28
         @test typeof(prev_wkt) === String
     end
@@ -167,7 +167,7 @@ include("generate_SFs.jl");
 
     @testset "df to sf test" begin
         df = DataFrames.select(polygons.df, Not(:geom))
-        df.geom = SF.sfgeom_to_gdal(polygons.df.geom)
+        df.geom = SF.from_sfgeom(polygons.df.geom, to = "archgdal")
 
         @test typeof(df) === DataFrame
         @test typeof(df.geom[1]) === AG.IGeometry{AG.wkbPolygon}
@@ -217,7 +217,7 @@ include("generate_SFs.jl");
     @testset "Find centroid" begin
         centroids = SF.st_centroid(polygons)
 
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(centroids.df.geom[1])) === AG.wkbPoint
+        @test AG.getgeomtype(SF.from_sfgeom(centroids.df.geom[1], to = "archgdal")) === AG.wkbPoint
         @test nrow(centroids) === 4
     end
 
@@ -227,7 +227,7 @@ include("generate_SFs.jl");
 
         nrst_pts = SF.st_nearest_points(polygon_1, line_4)
 
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(nrst_pts.df.geom[1])) === AG.wkbLineString
+        @test AG.getgeomtype(SF.from_sfgeom(nrst_pts.df.geom[1], to = "archgdal")) === AG.wkbLineString
         @test isapprox(SF.st_length(nrst_pts)[1], 20.885955693556273)
     end
 
@@ -248,7 +248,7 @@ include("generate_SFs.jl");
         int = SF.st_intersection(polygon_1, line_2)
 
         # Make sure geomtype is a line and length is approx \
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(int.df.geom[1])) === AG.wkbLineString
+        @test AG.getgeomtype(SF.from_sfgeom(int.df.geom[1], to = "archgdal")) === AG.wkbLineString
         @test isapprox(SF.st_length(int)[1], 16.402552599279197)
 
         # Do intersection w/polygons
@@ -256,7 +256,7 @@ include("generate_SFs.jl");
         int_buffered = SF.st_intersection(polygon_1, buffered_line_2)
 
         # Check that it returns polygons and area is about right
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(int_buffered.df.geom[1])) === AG.wkbPolygon
+        @test AG.getgeomtype(SF.from_sfgeom(int_buffered.df.geom[1], to = "archgdal")) === AG.wkbPolygon
         @test isapprox(SF.st_area(int_buffered)[1], 474.0340208116075)
 
         # Check that attributes were combined from the two inputs
@@ -270,7 +270,7 @@ include("generate_SFs.jl");
 
         difference = SF.st_difference(polygon_1, buffered_line_2)
 
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(difference.df.geom[1])) === AG.wkbPolygon
+        @test AG.getgeomtype(SF.from_sfgeom(difference.df.geom[1], to = "archgdal")) === AG.wkbPolygon
         @test SF.st_area(difference)[1] < SF.st_area(polygon_1)[1]
     end
 

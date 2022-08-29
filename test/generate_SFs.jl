@@ -15,7 +15,7 @@ way_id = [16461591, 294774651, 294774651, 294774651]
 from_node_id = [169859008, 169859011, 169859008, 6245889918]
 to_node_id = [169867562, 169859008, 6245889918, 6245889919]
 
-polygons = SF.SimpleFeature(DataFrames.DataFrame(way_id = way_id, from_node_id = from_node_id, to_node_id = to_node_id, geom = SF.gdal_to_sfgeom.(gdal_polygons)), GFT.EPSG(6543), AG.wkbPolygon);
+polygons = SF.SimpleFeature(DataFrames.DataFrame(way_id = way_id, from_node_id = from_node_id, to_node_id = to_node_id, geom = SF.to_sfgeom.(gdal_polygons)), GFT.EPSG(6543), AG.wkbPolygon);
 
 
 #------------ Generate lines from WKB. These are roads from OpenStreetMap for an intersection in Beaufort, North Carolina, USA ---------------
@@ -26,4 +26,4 @@ UInt8[0x01, 0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x0f, 0x21, 0x9b, 0x
 
 gdal_lines = AG.fromWKB.(lines_wkb)
 
-lines = SF.SimpleFeature(DataFrames.DataFrame(way_id = way_id, from_node_id = from_node_id, to_node_id = to_node_id, line_number = [1, 2, 3, 4],geom = SF.gdal_to_sfgeom.(gdal_lines)), GFT.EPSG(6543), AG.wkbLineString);
+lines = SF.SimpleFeature(DataFrames.DataFrame(way_id = way_id, from_node_id = from_node_id, to_node_id = to_node_id, line_number = [1, 2, 3, 4],geom = SF.to_sfgeom.(gdal_lines)), GFT.EPSG(6543), AG.wkbLineString);

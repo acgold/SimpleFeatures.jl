@@ -4,7 +4,7 @@
     if fill_col !== nothing
         fill_z --> reshape(x[:, fill_col], 1, nrow(x))
     end
-    sfgeom_to_gdal(x.df.geom)
+    from_sfgeom(x.df.geom, to = "archgdal")
 end
 
 @recipe function f(x::Vector{SimpleFeature})
@@ -14,7 +14,7 @@ end
 
     plot_colors = []
     for i in x
-        append!(plot_data, sfgeom_to_gdal(i.df.geom))
+        append!(plot_data, from_sfgeom(i.df.geom, to = "archgdal"))
     end
     plot_data
 end

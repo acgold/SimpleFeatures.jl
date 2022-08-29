@@ -68,6 +68,7 @@ Base.getindex(a::SimpleFeature, b::Int64, c::Union{UnitRange{Int64},Vector{Symbo
 #------------ Iteration & append! --------------------
 # To avoid accomodating DataFrameRows (DFRs), we will force DFRs to DFs. This means we can iterate rows without using eachrow
 DataFrames.eachrow(df::SimpleFeature) = SimpleFeature(DataFrames.DataFrame(DataFrames.eachrow(df.df)), df.crs, df.geomtype)
+DataFrames.eachcol(df::SimpleFeature) = DataFrames.eachcol(df.df)
 
 Base.iterate(r::SimpleFeature) = iterate(r, 1)
 
@@ -114,3 +115,6 @@ function DataFramesMeta.orderby(x::SimpleFeature, @nospecialize(args...))
     t = DataFrames.select(x.df, args...; copycols=false)
     SimpleFeature(x.df[sortperm(t), :], x.crs, x.geomtype)
 end
+
+DataFrames.names(itr::SimpleFeature) = DataFrames.names(itr.df)
+DataFrames.propertynames(df::SimpleFeature) = DataFrames.propertynames(df.df)

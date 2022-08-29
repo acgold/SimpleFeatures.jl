@@ -6,27 +6,27 @@
 Create a new SimpleFeature object that is buffered by the provided distance `d` in units of the crs. `d` can be a number or a string representing the column of the SimpleFeature DataFrame that contains numbers to use for the buffer distance.
 """
 function st_buffer(x::SimpleFeature, d::Real; geom_column=:geom, quadsegs::Int = 32)::SimpleFeature    
-    geom_list = sfgeom_to_geos.(x.df[:, geom_column])
+    geom_list = from_sfgeom.(x.df[:, geom_column], to = "libgeos")
 
     buffer_list = LibGEOS.buffer.(geom_list, d, quadsegs)
 
     new_df = DataFrames.select(x.df, Not(geom_column))
-    new_df[:, geom_column] = geos_to_sfgeom.(buffer_list)
+    new_df[:, geom_column] = to_sfgeom.(buffer_list)
 
-    geom_type = AG.getgeomtype(sfgeom_to_gdal(new_df[1, geom_column]))
+    geom_type = AG.getgeomtype(from_sfgeom(new_df[1, geom_column], to = "archgdal"))
 
     return SimpleFeature(new_df, x.crs, geom_type)
 end
 
 function st_buffer(x::SimpleFeature, d::Union{String,Symbol}; geom_column=:geom, quadsegs::Int = 32)::SimpleFeature
-    geom_list = sfgeom_to_geos.(x.df[:, geom_column])
+    geom_list = from_sfgeom.(x.df[:, geom_column], to = "libgeos")
 
     buffer_list = LibGEOS.buffer.(geom_list, x.df[:, d], quadsegs)
 
     new_df = DataFrames.select(x.df, Not(geom_column))
-    new_df[:, geom_column] = geos_to_sfgeom.(buffer_list)
+    new_df[:, geom_column] = to_sfgeom.(buffer_list)
 
-    geom_type = AG.getgeomtype(sfgeom_to_gdal(new_df[1, geom_column]))
+    geom_type = AG.getgeomtype(from_sfgeom(new_df[1, geom_column], to = "archgdal"))
 
     return SimpleFeature(new_df, x.crs, geom_type)
 end
@@ -38,10 +38,10 @@ end
 Create a SimpleFeature object of point centroids of the input geometries.
 """
 function st_centroid(x::SimpleFeature; geom_column=:geom)
-    geom_list = sfgeom_to_geos.(x.df[:, geom_column])
+    geom_list = from_sfgeom.(x.df[:, geom_column], to = "libgeos")
 
     cx = copy(x)
-    cx[!,:geom] = geos_to_sfgeom.(LibGEOS.centroid.(geom_list))
+    cx[!,:geom] = to_sfgeom.(LibGEOS.centroid.(geom_list))
     cx.geomtype = AG.wkbPoint
 
     return cx
@@ -83,8 +83,8 @@ end
 Create a new SimpleFeature object that is the difference of `x` and `y` in the geometry type of `x`.
 """
 function st_difference(x::SimpleFeature, y::SimpleFeature; geom_column=:geom)::SimpleFeature
-    geom_list_x = sfgeom_to_geos.(x[:, geom_column])
-    geom_list_y = sfgeom_to_geos.(y[:, geom_column])
+    geom_list_x = from_sfgeom.(x[:, geom_column], to = "libgeos")
+    geom_list_y = from_sfgeom.(y[:, geom_column], to = "libgeos")
 
     tree = LibGEOS.STRtree(geom_list_x)
 
@@ -128,12 +128,12 @@ function st_difference(x::SimpleFeature, y::SimpleFeature; geom_column=:geom)::S
             geos_diffs = row.diffs[index]
 
             if LibGEOS.isEmpty(geos_diffs) === false
-                new_df[row.x,geom_column] = geos_to_sfgeom(geos_diffs)
+                new_df[row.x,geom_column] = to_sfgeom(geos_diffs)
             end
         end
     end
 
-    geomtype = AG.getgeomtype(sfgeom_to_gdal(new_df[1,geom_column]))
+    geomtype = AG.getgeomtype(from_sfgeom(new_df[1,geom_column], to = "archgdal"))
 
     return new_df
 end
@@ -144,8 +144,8 @@ end
 Create a new SimpleFeature object that is the intersection of `x` and `y` in the geometry type of `y`.
 """
 function st_intersection(x::SimpleFeature, y::SimpleFeature; geom_column=:geom)::SimpleFeature
-    geom_list_x = sfgeom_to_geos.(x[:, geom_column])
-    geom_list_y = sfgeom_to_geos.(y[:, geom_column])
+    geom_list_x = from_sfgeom.(x[:, geom_column], to = "libgeos")
+    geom_list_y = from_sfgeom.(y[:, geom_column], to = "libgeos")
 
     tree = LibGEOS.STRtree(geom_list_x)
 
@@ -193,13 +193,13 @@ function st_intersection(x::SimpleFeature, y::SimpleFeature; geom_column=:geom):
             geos_int = row.ints[index]
 
             if LibGEOS.isEmpty(geos_int) === false
-                y_df[!,geom_column] = [geos_to_sfgeom(geos_int)]
+                y_df[!,geom_column] = [to_sfgeom(geos_int)]
                 append!(new_df, hcat(x_df, y_df, makeunique = true))
             end
         end
     end
 
-    geomtype = AG.getgeomtype(sfgeom_to_gdal(new_df[1,geom_column]))
+    geomtype = AG.getgeomtype(from_sfgeom(new_df[1,geom_column], to = "archgdal"))
 
     return SimpleFeature(new_df, x.crs, geomtype) 
 end
@@ -211,12 +211,12 @@ end
 Create a new SimpleFeature object whose segments have been sliced into segments no larger than the provided `max_length` in units of the crs. See `ArchGDAL.segmentize!` for more info
 """
 function st_segmentize(x::SimpleFeature, max_length::Real; geom_column=:geom)::SimpleFeature
-    geom_list = sfgeom_to_gdal.(x.df[:, geom_column])
+    geom_list = from_sfgeom.(x.df[:, geom_column], to = "archgdal")
 
     segmented_list = AG.segmentize!.(geom_list, max_length)
 
     new_df = DataFrames.select(x.df, Not(geom_column))
-    new_df[!, geom_column] = gdal_to_sfgeom.(segmented_list)
+    new_df[!, geom_column] = to_sfgeom.(segmented_list)
 
     return SimpleFeature(new_df, x.crs, x.geomtype)
 end
@@ -228,12 +228,12 @@ Create a SimpleFeature object with simplified input geometries.
 """
 function st_simplify(x::SimpleFeature, tol::Real=0, preserve_topology::Bool=true; geom_column=:geom)
     cx = copy(x)
-    geom_list = sfgeom_to_geos.(cx.df[:, geom_column])
+    geom_list = from_sfgeom.(cx.df[:, geom_column], to = "libgeos")
 
     if preserve_topology === true
-        cx[!,:geom] = geos_to_sfgeom.(LibGEOS.topologyPreserveSimplify.(geom_list, tol))
+        cx[!,:geom] = to_sfgeom.(LibGEOS.topologyPreserveSimplify.(geom_list, tol))
     elseif preserve_topology === false
-        cx[!,:geom] = geos_to_sfgeom.(LibGEOS.simplify.(geom_list, tol))
+        cx[!,:geom] = to_sfgeom.(LibGEOS.simplify.(geom_list, tol))
     else
         error("preserve_topology is invalid value")
     end
@@ -248,10 +248,10 @@ Create a SimpleFeature object that unions all input geometries.
 """
 function st_union(x::SimpleFeature; geom_column=:geom)
     combined_x = st_combine(x)
-    geom_list = sfgeom_to_geos.(combined_x.df[:, geom_column])
+    geom_list = from_sfgeom.(combined_x.df[:, geom_column], to = "libgeos")
 
-    combined_x[!,:geom] = [geos_to_sfgeom(LibGEOS.unaryUnion(geom_list[1]))]
-    combined_x.geomtype = AG.getgeomtype(sfgeom_to_gdal(combined_x.df.geom[1]))
+    combined_x[!,:geom] = [to_sfgeom(LibGEOS.unaryUnion(geom_list[1]))]
+    combined_x.geomtype = AG.getgeomtype(from_sfgeom(combined_x.df.geom[1], to = "archgdal"))
     
     return combined_x
 end
