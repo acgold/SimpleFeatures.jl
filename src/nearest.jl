@@ -4,8 +4,8 @@
 Returns a SimpleFeature object of lines between nearest points of each feature in `x` to `y` and columns indicating which row of x and y each line refers to.
 """
 function st_nearest_points(x::SimpleFeature, y::SimpleFeature; geom_column=:geom)::SimpleFeature
-    geom_list_x = from_sfgeom.(x.df[:, geom_column], to = "libgeos")
-    geom_list_y = from_sfgeom.(y.df[:, geom_column], to = "libgeos")
+    geom_list_x = from_sfgeom.(x.df[:, geom_column], to = "geos")
+    geom_list_y = from_sfgeom.(y.df[:, geom_column], to = "geos")
 
     x_rownumbers = rownumber.(eachrow(x.df))
     y_rownumbers = rownumber.(eachrow(y.df))

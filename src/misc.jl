@@ -5,7 +5,7 @@ Create a bounding box polygon for the provided SimpleFeature object. Resulting p
 """
 function st_bbox(x::SimpleFeature; geom_column=:geom)
     combined_x = st_combine(x)
-    geom = from_sfgeom(combined_x.df[:, geom_column], to = "archgdal")
+    geom = from_sfgeom(combined_x.df[:, geom_column], to = "gdal")
     return AG.boundingbox(geom[1])
 end
 
@@ -16,7 +16,7 @@ end
 Create a new SimpleFeature object that is projected to the provided `crs`.
 """
 function st_transform(x::SimpleFeature, crs::GFT.GeoFormat; geom_column=:geom, order=:compliant)::SimpleFeature
-    geom_list = from_sfgeom.(x.df[:, geom_column], to = "archgdal")
+    geom_list = from_sfgeom.(x.df[:, geom_column], to = "gdal")
 
     AG.reproject(geom_list, x.crs, crs; order=order)
 

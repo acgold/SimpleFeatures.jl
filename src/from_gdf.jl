@@ -242,7 +242,7 @@ function st_write_memory(x::SimpleFeature; layer_name::AbstractString="data", dr
         error("Geometries are not type `sfgeom` and cannot be written with this function")
     end
 
-    geom_list = from_sfgeom(x[:, geom_column], to = "archgdal")
+    geom_list = from_sfgeom(x[:, geom_column], to = "gdal")
 
     new_df = deepcopy(x.df)
     new_df[!, geom_column] = geom_list

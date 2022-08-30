@@ -1,4 +1,3 @@
-
 """
 df_to_sf(x::DataFrame, crs::GFT.GeoFormat=GFT.EPSG(4326); geom_column=:geom)
 
@@ -19,6 +18,7 @@ function df_to_sf(x::DataFrames.DataFrame, crs::GFT.GeoFormat=GFT.EPSG(4326); ge
     return SimpleFeature(new_df, crs, geom_type)
 end
 
+
 """
 sf_to_df(x::SimpleFeature; geom_column=:geom)
 
@@ -27,9 +27,9 @@ Convert a SimpleFeature object to a DataFrame containing a column of ArchGDAL ge
 function sf_to_df(x::SimpleFeature; geom_column=:geom)
 
     new_df = deepcopy(x.df)
-    new_df[!, geom_column] = from_sfgeom(new_df[:, geom_column], to = "archgdal")
+    new_df[!, geom_column] = from_sfgeom(new_df[:, geom_column], to = "gdal")
 
-    println("CRS: " * x.crs.val)
+    println("CRS: " * string(x.crs.val))
     println()
 
     return new_df
@@ -37,15 +37,27 @@ end
 
 
 """
-rasterize(x::SimpleFeature, y::String; filename::String, value::Union{String, Real, Nothing}=nothing, touches::Bool = false,  geom_column = :geom)
+    st_rasterize(x::SimpleFeature, y::Union{String, AG.AbstractDataset}; filename::String, scale::Number=1, value::Union{String, Number, Nothing}=nothing, touches::Bool = false, dtype::String = "Float64", nodataval::Number = 0, options::Vector{String}=Vector{String}(["COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES"]),temp_dir::Union{String, Nothing}=nothing, geom_column = :geom)
 
-Convert a SimpleFeature object to a raster
+Convert a SimpleFeature object to a raster file. 
 
 # Parameters
+- `x` A SimpleFeature object
+- `y` The raster used as a template for rasterization. Either the path to the raster or an ArchGDAL raster dataset.
 
+# Keyword Parameters
+- `filename` The output raster path.  The output raster format is derived from the filename extension.
+- `scale` Factor to reduce resolution of template raster.
+- `value` The value written to the output raster. Either a single number or the string name of a column in the SimpleFeature object.
+- `touches` Should the output raster should include "all pixels touched by lines or polygons, not just those on the line render path, or whose center point is within the polygon" - gdal_rasterize (https://gdal.org/programs/gdal_rasterize.html)
+- `dtype` Data type of output raster
+- `nodataval` Specify the value to be used as NoData in the output raster
+- `options` Additional options passed to gdal_rasterize. See [Creation Options](https://gdal.org/drivers/raster/gtiff.html#creation-options) for the desired output raster driver
+- `temp_dir` Specify an alternative location to create temporary files while performing rasterization. The default locations are the Scratch space for the SF package and /vsimem/ from GDAL.
+- `geom_column` = :geom
 """
-function rasterize(x::SimpleFeature, y::Union{String, AG.AbstractDataset}; filename::String, scale::Number=1, value::Union{String, Number, Nothing}=nothing, touches::Bool = false, dtype::String = "Float64", nodataval::Number = 0, options::Vector{String}=Vector{String}(["COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES"]),temp_dir::Union{String, Nothing}=nothing, geom_column = :geom)
-    geom_list = from_sfgeom(x[:, geom_column], to = "archgdal")
+function st_rasterize(x::SimpleFeature, y::Union{String, AG.AbstractDataset}; filename::String, scale::Number=1, value::Union{String, Number, Nothing}=nothing, touches::Bool = false, dtype::String = "Float64", nodataval::Number = 0, options::Vector{String}=Vector{String}(["COMPRESS=LZW", "BIGTIFF=YES", "TILED=YES"]),temp_dir::Union{String, Nothing}=nothing, geom_column = :geom)
+    geom_list = from_sfgeom(x[:, geom_column], to = "gdal")
 
     if typeof(value) === String
         # error("Using a column as a burn in value is not yet supported.")
@@ -119,14 +131,3 @@ function rasterize(x::SimpleFeature, y::Union{String, AG.AbstractDataset}; filen
     println("New raster at: \n"* filename)
     return 
 end
-
-# y = AG.read("/Users/adam/Documents/GitHub/htf-nc-commuting/data/NOAA_SLR_DEM.tif")
-# filename = "/Users/adam/Documents/GitHub/htf-nc-commuting/data/testrasterize.tif"
-# x = st_read("/Volumes/my_hd/osrm/nc_road_lines_proj_buff.gpkg")
-# x = st_read("/Volumes/my_hd/osrm/nc_road_lines_proj.gpkg")
-# y = "/Volumes/my_hd/htf_on_roads/noaa_elevation/water_level_modelling/zero_to_point4/class_error.tif"
-# filename = "/Volumes/my_hd/osrm/nc_buff_roads.tif"
-# value = "way_id"
-
-# SF.rasterize(x, y, filename=filename, value = value, dtype = "Int64")
-# rasterize(x, y, filename = "/Volumes/my_hd/osrm/buff_roads.tif", value = 1, dtype="Int16")

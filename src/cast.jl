@@ -238,7 +238,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String,Nothing}=no
 
         # copy df and convert sfgeoms to AG
         cx = DataFrames.select(x.df, Not(geom_column))
-        cx[:, geom_column] = from_sfgeom.(x.df[:, geom_column], to = "archgdal")
+        cx[:, geom_column] = from_sfgeom.(x.df[:, geom_column], to = "gdal")
 
         if length(functions) === 1
             f = getfield(SimpleFeatures, Symbol(functions[1]))
@@ -268,7 +268,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String,Nothing}=no
 
         # copy df and convert sfgeoms to AG
         cx = DataFrames.select(x.df, Not(geom_column))
-        cx[:, geom_column] = from_sfgeom.(x.df[:, geom_column], to = "archgdal")
+        cx[:, geom_column] = from_sfgeom.(x.df[:, geom_column], to = "gdal")
 
         if length(functions) < 1
             error("Requested transformation not possible - `st_cast` only decomposes geometries.  See `aggregate` for more.")

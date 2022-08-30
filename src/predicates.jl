@@ -4,8 +4,8 @@
 Returns a sparse index list of disjoint features.
 """
 function st_disjoint(x::SimpleFeature, y::SimpleFeature; geom_column=:geom, sparse::Bool=true)
-    geom_list_x = from_sfgeom.(x[:, geom_column], to = "libgeos")
-    geom_list_y = from_sfgeom.(y[:, geom_column], to = "libgeos")
+    geom_list_x = from_sfgeom.(x[:, geom_column], to = "geos")
+    geom_list_y = from_sfgeom.(y[:, geom_column], to = "geos")
 
     tree = LibGEOS.STRtree(geom_list_x)
 
@@ -55,8 +55,8 @@ end
 Returns a sparse index list of intersecting features.
 """
 function st_intersects(x::SimpleFeature, y::SimpleFeature; geom_column=:geom)
-    geom_list_x = from_sfgeom.(x[:, geom_column], to = "libgeos")
-    geom_list_y = from_sfgeom.(y[:, geom_column], to = "libgeos")
+    geom_list_x = from_sfgeom.(x[:, geom_column], to = "geos")
+    geom_list_y = from_sfgeom.(y[:, geom_column], to = "geos")
 
     tree = LibGEOS.STRtree(geom_list_x)
 
