@@ -1,7 +1,7 @@
 name = "SimpleFeatures"
 uuid = "afcd3178-a774-4cb1-a6b9-c159da09e922"
 authors = ["Adam Gold"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
