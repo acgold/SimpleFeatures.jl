@@ -102,7 +102,7 @@ function st_read(ds, layer)
         "" in names(df) && rename!(df, Dict(Symbol("") => :geom,))  
 
         for row in eachrow(df)
-            push!(sfgeom_list, sfgeom(AG.toWKB(row.geom), preview_wkt_gdal(row.geom)))
+            push!(sfgeom_list, sfgeom(AG.toWKB(row.geom), preview_wkt(row.geom)))
         end
 
         df[!, :geom] = sfgeom_list
@@ -117,7 +117,7 @@ function st_read(ds, layer)
 end
 
 """
-    st_write(fn::AbstractString, table; layer_name="data", geom_column=:geometry, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
+    st_write(fn::AbstractString, x::SimpleFeature; layer_name="data", geom_column=:geometry, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
 
 Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
 """
@@ -230,4 +230,3 @@ function st_write(fn::AbstractString, x::SimpleFeature; layer_name::AbstractStri
     end
     fn
 end
-

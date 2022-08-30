@@ -10,7 +10,7 @@ import SimpleFeatures as SF
 
 ## Read & write data
 
-Most GIS types can be read and written using the functions `st_read` and `st_write`, respectively.
+Most GIS types can be read and written using the functions `st_read` and `st_write`, respectively. Parquet files can be read/written using the functions `st_read_parquet` and `st_write_parquet`.
 
 ```julia
 x = SF.st_read("data/test.gpkg")

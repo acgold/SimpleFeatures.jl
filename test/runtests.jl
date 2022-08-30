@@ -4,6 +4,7 @@ using DataFrames
 import GeoFormatTypes as GFT
 using Test
 import ArchGDAL as AG
+using LibGEOS
 using GeoInterface
 using DataFramesMeta
 
@@ -27,27 +28,84 @@ include("generate_SFs.jl");
         @test typeof(polygons.crs) === GFT.WellKnownText2{GFT.Unknown}
     end
 
+    @testset "Reading/writing parquet files to SimpleFeature Object" begin
+        SF.st_write_parquet(joinpath(testdatadir, "test.parquet"), polygons)
+        @test isfile(joinpath(testdatadir, "test.parquet"))
+
+        parquet_polygons = SF.st_read_parquet(joinpath(testdatadir, "test.parquet"); crs = polygons.crs)
+        @test typeof(parquet_polygons) === SF.SimpleFeature
+        @test DataFrames.nrow(parquet_polygons) === 4
+        @test typeof(parquet_polygons.crs) <: GFT.GeoFormat
+
+    end
+
     # sfgeom conversions
     @testset "Converting geoms from sfgeom to gdal and back" begin
         geom = polygons.df.geom[1]
         @test typeof(geom) === SF.sfgeom
 
-        gdal_geom = SF.sfgeom_to_gdal(geom)
+        # gdal
+        gdal_geom = SF.from_sfgeom(geom, to = "gdal")
         @test typeof(gdal_geom) === AG.IGeometry{AG.wkbPolygon}
 
-        new_geom = SF.gdal_to_sfgeom(gdal_geom)
+        new_geom = SF.to_sfgeom(gdal_geom)
         @test typeof(new_geom) === SF.sfgeom
 
         geoms = polygons.df.geom[1:2]
         @test typeof(geoms) === Vector{SF.sfgeom}
 
-        gdal_geoms = SF.sfgeom_to_gdal(geoms)
+        gdal_geoms = SF.from_sfgeom(geoms, to = "gdal")
         @test typeof(gdal_geoms) === Vector{AG.AbstractGeometry}
 
-        new_geoms = SF.gdal_to_sfgeom(gdal_geoms)
+        new_geoms = SF.to_sfgeom(gdal_geoms)
         @test typeof(new_geoms) === Vector{SF.sfgeom}
 
-        prev_wkt = SF.preview_wkt_gdal(gdal_geom)
+        convert_gdal = Base.convert(AG.IGeometry, geom)
+        @test typeof(convert_gdal) <: AG.IGeometry
+
+        convert_sfgeom = Base.convert(SF.sfgeom, convert_gdal)
+        @test typeof(convert_sfgeom) <: SF.sfgeom
+
+        # geos
+        geos_geom = SF.from_sfgeom(geom, to = "geos")
+        @test typeof(geos_geom) === LibGEOS.Polygon
+
+        new_geom = SF.to_sfgeom(geos_geom)
+        @test typeof(new_geom) === SF.sfgeom
+
+        geoms = polygons.df.geom[1:2]
+        @test typeof(geoms) === Vector{SF.sfgeom}
+
+        geos_geoms = SF.from_sfgeom(geoms, to = "geos")
+        @test typeof(geos_geoms) === Vector{LibGEOS.AbstractGeometry}
+
+        new_geoms = SF.to_sfgeom(geos_geoms)
+        @test typeof(new_geoms) === Vector{SF.sfgeom}
+
+        convert_geos = Base.convert(LibGEOS.Polygon, geom)
+        @test typeof(convert_geos) <: LibGEOS.AbstractGeometry
+
+        convert_sfgeom = Base.convert(SF.sfgeom, convert_geos)
+        @test typeof(convert_sfgeom) <: SF.sfgeom
+
+
+        # GFT.WellKnownBinary
+        gftwkb_geom = SF.from_sfgeom(geom, to = "gft.wkb")
+        @test typeof(gftwkb_geom) <: GFT.WellKnownBinary
+
+        new_geom = SF.to_sfgeom(gftwkb_geom)
+        @test typeof(new_geom) === SF.sfgeom
+
+        geoms = polygons.df.geom[1:2]
+        @test typeof(geoms) === Vector{SF.sfgeom}
+
+        gftwkb_geoms = SF.from_sfgeom(geoms, to = "gft.wkb")
+        @test typeof(gftwkb_geoms) === Vector{GFT.WellKnownBinary{GFT.Geom, Vector{UInt8}}}
+
+        new_geoms = SF.to_sfgeom(gftwkb_geoms)
+        @test typeof(new_geoms) === Vector{SF.sfgeom}
+
+        prev_wkt = SF.preview_wkt(gdal_geom)
         @test length(prev_wkt) === 28
         @test typeof(prev_wkt) === String
     end
@@ -59,13 +117,17 @@ include("generate_SFs.jl");
         @test polygons.df.geom[1] !== proj_polygons.df.geom[1]
     end
 
-    @testset "buffer spatial DataFrame" begin
+    @testset "buffer SimpleFeature object" begin
         buff_polygons = SF.st_buffer(polygons, 10)
         original_area = sum(SF.st_area(polygons))
         @test isapprox(original_area, 39271.80464290353)
 
         new_area = sum(SF.st_area(buff_polygons))
         @test isapprox(new_area, 66529.84952521359)
+
+        buff_polygons[:, "test_field"] = [1,2,3,4]
+        buffer_by_field = SF.st_buffer(buff_polygons, "test_field") 
+        @test isapprox(sum(SF.st_area(buffer_by_field)), 71818.23379268973)  
     end
 
     @testset "st_cast combine - full example" begin
@@ -167,7 +229,7 @@ include("generate_SFs.jl");
 
     @testset "df to sf test" begin
         df = DataFrames.select(polygons.df, Not(:geom))
-        df.geom = SF.sfgeom_to_gdal(polygons.df.geom)
+        df.geom = SF.from_sfgeom(polygons.df.geom, to = "gdal")
 
         @test typeof(df) === DataFrame
         @test typeof(df.geom[1]) === AG.IGeometry{AG.wkbPolygon}
@@ -217,7 +279,7 @@ include("generate_SFs.jl");
     @testset "Find centroid" begin
         centroids = SF.st_centroid(polygons)
 
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(centroids.df.geom[1])) === AG.wkbPoint
+        @test AG.getgeomtype(SF.from_sfgeom(centroids.df.geom[1], to = "gdal")) === AG.wkbPoint
         @test nrow(centroids) === 4
     end
 
@@ -227,7 +289,7 @@ include("generate_SFs.jl");
 
         nrst_pts = SF.st_nearest_points(polygon_1, line_4)
 
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(nrst_pts.df.geom[1])) === AG.wkbLineString
+        @test AG.getgeomtype(SF.from_sfgeom(nrst_pts.df.geom[1], to = "gdal")) === AG.wkbLineString
         @test isapprox(SF.st_length(nrst_pts)[1], 20.885955693556273)
     end
 
@@ -248,7 +310,7 @@ include("generate_SFs.jl");
         int = SF.st_intersection(polygon_1, line_2)
 
         # Make sure geomtype is a line and length is approx \
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(int.df.geom[1])) === AG.wkbLineString
+        @test AG.getgeomtype(SF.from_sfgeom(int.df.geom[1], to = "gdal")) === AG.wkbLineString
         @test isapprox(SF.st_length(int)[1], 16.402552599279197)
 
         # Do intersection w/polygons
@@ -256,7 +318,7 @@ include("generate_SFs.jl");
         int_buffered = SF.st_intersection(polygon_1, buffered_line_2)
 
         # Check that it returns polygons and area is about right
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(int_buffered.df.geom[1])) === AG.wkbPolygon
+        @test AG.getgeomtype(SF.from_sfgeom(int_buffered.df.geom[1], to = "gdal")) === AG.wkbPolygon
         @test isapprox(SF.st_area(int_buffered)[1], 474.0340208116075)
 
         # Check that attributes were combined from the two inputs
@@ -270,7 +332,7 @@ include("generate_SFs.jl");
 
         difference = SF.st_difference(polygon_1, buffered_line_2)
 
-        @test AG.getgeomtype(SF.sfgeom_to_gdal(difference.df.geom[1])) === AG.wkbPolygon
+        @test AG.getgeomtype(SF.from_sfgeom(difference.df.geom[1], to = "gdal")) === AG.wkbPolygon
         @test SF.st_area(difference)[1] < SF.st_area(polygon_1)[1]
     end
 
@@ -283,4 +345,38 @@ include("generate_SFs.jl");
         disjoint = SF.st_disjoint(polygon_1, lines)
         @test disjoint == [[4]]
     end
+
+    @testset "Test out rasterize" begin
+        line_raster = SF.st_rasterize(lines, joinpath(testdatadir, "test.tif"); filename = joinpath(testdatadir, "rasterize.tif"), value = "line_number", options = ["COMPRESS=LZW", "TILED=YES"], dtype = "Int16")
+        @test isfile(joinpath(testdatadir, "rasterize.tif"))
+        rasterized_tif = AG.readraster(joinpath(testdatadir, "rasterize.tif"))
+        @test Int(AG.width(rasterized_tif)) === 494
+        @test Int(AG.height(rasterized_tif)) === 486
+    end
+
+    @testset "Test GeoInterface for geometry" begin
+        @test GeoInterface.testgeometry(lines.df.geom[1])
+        a = lines.df.geom[1]
+        b = lines.df.geom[2]
+
+        @test GeoInterface.intersects(a,b) === true
+        @test GeoInterface.equals(a,b) === false
+        @test GeoInterface.disjoint(a,b) === false
+        @test GeoInterface.touches(a,b) === true
+        @test GeoInterface.crosses(a,b) === false
+        @test GeoInterface.within(a,b) === false
+        @test GeoInterface.contains(a,b) === false
+        @test GeoInterface.overlaps(a,b) === false
+        @test GeoInterface.distance(a,b) === 0.0
+        @test isapprox(GeoInterface.length(a), 611.4701976989531)
+        @test GeoInterface.area(a) === 0.0
+        @test GeoInterface.union(a, b).preview === "MULTILINESTRING ((2702009..."
+        @test GeoInterface.intersection(a, b).preview === "POINT (2702009.6073412756..."
+        @test GeoInterface.difference(a, b).preview === "LINESTRING (2702009.60734..."
+        @test GeoInterface.symdifference(a, b).preview === "MULTILINESTRING ((2702009..."
+        @test GeoInterface.buffer(a, 10).preview === "POLYGON ((2702330.6125457..."
+        @test GeoInterface.convexhull(a).preview === "LINESTRING (2702009.60734..."
+
+    end
+
 end

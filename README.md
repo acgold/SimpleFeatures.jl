@@ -20,6 +20,8 @@ This package currently offers some basic spatial operations, and more will be ad
 
 This package creates a `SimpleFeature` custom type that effectively functions as a DataFrame containing feature data but also contains projection and geometry type info. 
 
+Geometries are represented as another custom type called `sfgeom`. The `sfgeom` type follows the [GeoInterface](https://juliageo.org/GeoInterface.jl/stable/) standard, so it can be converted into other geometry types and GeoInterface functions will work.
+
 **Example:**
 
 ```julia

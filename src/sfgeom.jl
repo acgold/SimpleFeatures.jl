@@ -32,71 +32,121 @@ end
 # Define equality test
 Base.:(==)(a::sfgeom, b::sfgeom) = a.wkb == b.wkb && a.preview == b.preview
 
-# functions for parsing WKT from GDAL and GEOS for preview
-function preview_wkt_gdal(x::AG.AbstractGeometry, n::Int=25)
+
+# Functions for parsing WKT from GDAL, GEOS, etc for when printing
+function preview_wkt(x::AG.AbstractGeometry, n::Int=25)
     wkt = AG.toWKT(x)
     return wkt[1:min(length(wkt), n)] * "..."
 end
 
-function preview_wkt_geos(x::LibGEOS.AbstractGeometry, n::Int=25)
+function preview_wkt(x::LibGEOS.AbstractGeometry, n::Int=25)
     wkt = LibGEOS.writegeom(x)
-    return wkt[1:min(length(wkt),n)] * "..."
+    return wkt[1:min(length(wkt), n)] * "..."
 end
 
-# convert sfgeom type to GDAL, and reverse
-function sfgeom_to_gdal(x::Vector{sfgeom})
-    geom_list = Vector{AG.AbstractGeometry}()
 
-    for i in x
-        push!(geom_list, AG.fromWKB(i.wkb))
-    end
+# Functions below convert sfgeom types to/from:
+# - gdal (ArchGDAL.jl)
+# - geos (LibGEOS.jl)
+# - GFT.WellKnownBinary
 
-    return geom_list
+# Singular conversions to sfgeom
+function to_sfgeom(x::sfgeom)
+    return x
 end
 
-function sfgeom_to_gdal(x::sfgeom)
-    return AG.fromWKB(x.wkb)
+function to_sfgeom(x::GFT.WellKnownBinary{GFT.Geom,Vector{UInt8}})
+    return sfgeom(x.val, "WellKnownBinary")
 end
 
-function gdal_to_sfgeom(x::Vector{AG.AbstractGeometry})
+function to_sfgeom(x::AG.AbstractGeometry)
+    return sfgeom(AG.toWKB(x), preview_wkt(x))
+end
+
+function to_sfgeom(x::LibGEOS.AbstractGeometry)
+    return sfgeom(LibGEOS.writegeom(x, LibGEOS.WKBWriter(LibGEOS._context)), preview_wkt(x))
+end
+
+# Vector conversions to sfgeom
+function to_sfgeom(x::Vector{sfgeom})
+    return x
+end
+
+function to_sfgeom(x::Vector{GFT.WellKnownBinary{GFT.Geom,Vector{UInt8}}})
     geom_list = Vector{sfgeom}()
 
     for i in x
-        push!(geom_list, sfgeom(AG.toWKB(i), preview_wkt_gdal(i)))
+        push!(geom_list, sfgeom(i.val, "WellKnownBinary"))
     end
 
     return geom_list
 end
 
-function gdal_to_sfgeom(x::AG.AbstractGeometry)
-    return sfgeom(AG.toWKB(x), preview_wkt_gdal(x))
-end
-
-# convert sfgeom type to GEOS, and reverse
-function sfgeom_to_geos(x::Vector{sfgeom})
-    geom_list = Vector{LibGEOS.AbstractGeometry}()
-
-    for i in x
-        push!(geom_list, LibGEOS.readgeom(i.wkb))
-    end
-
-    return geom_list
-end
-
-function sfgeom_to_geos(x::sfgeom)
-    return LibGEOS.readgeom(x.wkb)
-end
-
-function geos_to_sfgeom(x::Vector{LibGEOS.AbstractGeometry})
+function to_sfgeom(x::Vector{AG.AbstractGeometry})
     geom_list = Vector{sfgeom}()
 
     for i in x
-        push!(geom_list, sfgeom(LibGEOS.writegeom(i, LibGEOS.WKBWriter(LibGEOS._context)), preview_wkt_geos(i)))
+        push!(geom_list, sfgeom(AG.toWKB(i), preview_wkt(i)))
     end
 
     return geom_list
 end
 
-function geos_to_sfgeom(x::LibGEOS.AbstractGeometry)
-    return sfgeom(LibGEOS.writegeom(x, LibGEOS.WKBWriter(LibGEOS._context)), preview_wkt_geos(x))
+function to_sfgeom(x::Vector{LibGEOS.AbstractGeometry})
+    geom_list = Vector{sfgeom}()
+
+    for i in x
+        push!(geom_list, sfgeom(LibGEOS.writegeom(i, LibGEOS.WKBWriter(LibGEOS._context)), preview_wkt(i)))
+    end
+
+    return geom_list
+end
+
+
+# Singular conversions from sfgeom
+function from_sfgeom(x::sfgeom; to::String)
+    if lowercase(to) === "gft.wkb"
+        return GFT.WellKnownBinary(GFT.Geom(), x.wkb)
+    end
+
+    if lowercase(to) === "gdal"
+        return AG.fromWKB(x.wkb)
+    end
+
+    if lowercase(to) === "geos"
+        return LibGEOS.readgeom(x.wkb)
+    end
+end
+
+# Vector conversions from sfgeom
+function from_sfgeom(x::Vector{sfgeom}; to::String)
+    if lowercase(to) === "gft.wkb"
+        geom_list = Vector{GFT.WellKnownBinary{GFT.Geom,Vector{UInt8}}}()
+
+        for i in x
+            push!(geom_list, GFT.WellKnownBinary(GFT.Geom(), i.wkb))
+        end
+
+        return geom_list
+    end
+
+    if lowercase(to) === "gdal"
+        geom_list = Vector{AG.AbstractGeometry}()
+
+        for i in x
+            push!(geom_list, AG.fromWKB(i.wkb))
+        end
+
+        return geom_list
+    end
+
+    if lowercase(to) === "geos"
+        geom_list = Vector{LibGEOS.AbstractGeometry}()
+
+        for i in x
+            push!(geom_list, LibGEOS.readgeom(i.wkb))
+        end
+
+        return geom_list
+    end
 end

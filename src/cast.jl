@@ -238,7 +238,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String,Nothing}=no
 
         # copy df and convert sfgeoms to AG
         cx = DataFrames.select(x.df, Not(geom_column))
-        cx[:, geom_column] = sfgeom_to_gdal.(x.df[:, geom_column])
+        cx[:, geom_column] = from_sfgeom.(x.df[:, geom_column], to = "gdal")
 
         if length(functions) === 1
             f = getfield(SimpleFeatures, Symbol(functions[1]))
@@ -246,7 +246,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String,Nothing}=no
             if occursin("multigeom", functions[1]) === true
                 cx = f(cx, geom_type, groupid; geom_column=geom_column, kwargs...)
                 new_geom_type = AG.getgeomtype(cx[1, geom_column])
-                cx[!, geom_column] = gdal_to_sfgeom.(cx[:, geom_column])
+                cx[!, geom_column] = to_sfgeom.(cx[:, geom_column])
 
                 return SimpleFeature(cx, x.crs, new_geom_type)
             end
@@ -254,7 +254,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String,Nothing}=no
             if occursin("multigeom", functions[1]) === false
                 cx = f(cx, geom_type; geom_column=geom_column, kwargs...)
                 new_geom_type = AG.getgeomtype(cx[1, geom_column])
-                cx[!, geom_column] = gdal_to_sfgeom.(cx[:, geom_column])
+                cx[!, geom_column] = to_sfgeom.(cx[:, geom_column])
 
                 return SimpleFeature(cx, x.crs, new_geom_type)
             end
@@ -268,7 +268,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String,Nothing}=no
 
         # copy df and convert sfgeoms to AG
         cx = DataFrames.select(x.df, Not(geom_column))
-        cx[:, geom_column] = sfgeom_to_gdal.(x.df[:, geom_column])
+        cx[:, geom_column] = from_sfgeom.(x.df[:, geom_column], to = "gdal")
 
         if length(functions) < 1
             error("Requested transformation not possible - `st_cast` only decomposes geometries.  See `aggregate` for more.")
@@ -279,7 +279,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String,Nothing}=no
 
             cx = f(cx, geom_type; geom_column=geom_column, kwargs...)
             new_geom_type = AG.getgeomtype(cx[1, geom_column])
-            cx[!, geom_column] = gdal_to_sfgeom.(cx[:, geom_column])
+            cx[!, geom_column] = to_sfgeom.(cx[:, geom_column])
 
             return SimpleFeature(cx, x.crs, new_geom_type)
         end
@@ -296,7 +296,7 @@ function st_cast(x::SimpleFeature, to::String; groupid::Union{String,Nothing}=no
             end
 
             new_geom_type = AG.getgeomtype(cx[1, geom_column])
-            cx[!, geom_column] = gdal_to_sfgeom.(cx[:, geom_column])
+            cx[!, geom_column] = to_sfgeom.(cx[:, geom_column])
 
             return SimpleFeature(cx, x.crs, new_geom_type)
         end
